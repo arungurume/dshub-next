@@ -1,0 +1,335 @@
+@import "tailwindcss";
+
+/* ─── Dark theme ──────────────────────────────────────────────────── */
+html.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 217 27% 22%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 217 27% 22%;
+
+  /* ─ Custom semantic tokens (dark) ─ */
+  --bg-base:        #070708;
+  --bg-layout:      #0A0A0B;
+  --card-bg:        #111113;
+  --sidebar-bg:     #0d0d0f;
+  --sidebar-hover:  rgba(255,255,255,0.05);
+  --border-color:   rgba(255,255,255,0.08);
+  --text:           #f1f1f3;
+  --text-muted:     #888899;
+  --accent:         #293548;
+  --accent-light:   rgba(41,53,72,0.12);
+  --border:         rgba(255,255,255,0.08);
+
+  /* glass */
+  --glass-bg:       rgba(15,15,15,0.6);
+  --glass-border:   rgba(255,255,255,0.05);
+  --scrollbar-thumb: rgba(255,255,255,0.1);
+  --scrollbar-hover: rgba(255,255,255,0.25);
+
+  /* loader bg */
+  --loader-bg:      #0B0B0C;
+  /* inputs */
+  --input-bg:       rgba(255,255,255,0.04);
+
+  /* ─ Button system tokens (dark) ─ */
+  --btn-cta-bg:           #293548;
+  --btn-cta-hover:        #1e2a3a;
+  --btn-cta-text:         #ffffff;
+  --btn-success-bg:       #22C55E;
+  --btn-success-hover:    #16A34A;
+  --btn-danger-bg:        #EF4444;
+  --btn-danger-hover:     #DC2626;
+  --btn-secondary-bg:     rgba(255,255,255,0.05);
+  --btn-secondary-border: rgba(255,255,255,0.12);
+  --btn-secondary-text:   #d1d5db;
+  --btn-secondary-hover:  rgba(255,255,255,0.09);
+}
+
+/* ─── Light theme (default) ────────────────────────────────────────────────────────────── */
+:root,
+html.light {
+  --background: 0 0% 98%;
+  --foreground: 240 10% 8%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 8%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 8%;
+
+  --primary: 215 28% 17%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 240 5% 93%;
+  --secondary-foreground: 240 10% 10%;
+
+  --muted: 240 5% 93%;
+  --muted-foreground: 240 5% 45%;
+
+  --accent: 240 3.7% 93%;
+  --accent-foreground: 240 10% 8%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 240 6% 88%;
+  --input: 240 6% 88%;
+  --ring: 215 28% 17%;
+
+  /* ─ Custom semantic tokens (light) ─ */
+  --bg-base:        #f5f5f7;
+  --bg-layout:      #f0f0f2;
+  --card-bg:        #ffffff;
+  --sidebar-bg:     #f7f7f9;
+  --sidebar-hover:  rgba(0,0,0,0.04);
+  --border-color:   rgba(0,0,0,0.09);
+  --text:           #1a1a2e;
+  --text-muted:     #6b7280;
+  --accent:         #1F2937;
+  --accent-light:   rgba(31,41,55,0.08);
+  --border:         rgba(0,0,0,0.09);
+
+  /* glass */
+  --glass-bg:       rgba(255,255,255,0.75);
+  --glass-border:   rgba(0,0,0,0.07);
+  --scrollbar-thumb: rgba(0,0,0,0.12);
+  --scrollbar-hover: rgba(0,0,0,0.25);
+
+  /* loader bg */
+  --loader-bg:      #f5f5f7;
+  /* inputs */
+  --input-bg:       #ffffff;
+
+  /* ─ Button system tokens (light) ─ */
+  --btn-cta-bg:           #1F2937;
+  --btn-cta-hover:        #111827;
+  --btn-cta-text:         #ffffff;
+  --btn-success-bg:       #22C55E;
+  --btn-success-hover:    #16A34A;
+  --btn-danger-bg:        #EF4444;
+  --btn-danger-hover:     #DC2626;
+  --btn-secondary-bg:     #ffffff;
+  --btn-secondary-border: #E5E7EB;
+  --btn-secondary-text:   #374151;
+  --btn-secondary-hover:  #F9FAFB;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --font-sans: var(--font-inter), sans-serif;
+  --font-display: var(--font-outfit), sans-serif;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text);
+  font-family: var(--font-sans);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ─── Glass panels ───────────────────────────────────────────────────────────── */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+/* ─── Global Button Utility Classes ─────────────────────────────────────────── */
+.btn-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: var(--btn-cta-bg);
+  color: var(--btn-cta-text);
+  border: none;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.btn-cta:hover:not(:disabled) { background: var(--btn-cta-hover); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.btn-cta:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-success {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: var(--btn-success-bg);
+  color: #fff;
+  border: none;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(34,197,94,0.2);
+  transition: all 0.2s ease;
+}
+.btn-success:hover:not(:disabled) { background: var(--btn-success-hover); }
+.btn-success:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: var(--btn-danger-bg);
+  color: #fff;
+  border: none;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.2);
+  transition: all 0.2s ease;
+}
+.btn-danger:hover:not(:disabled) { background: var(--btn-danger-hover); }
+.btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: 1px solid var(--btn-secondary-border);
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-secondary:hover:not(:disabled) { background: var(--btn-secondary-hover); }
+.btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ─── Smooth theme transition on all elements ───────────────────────────────── */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.05s ease;
+}
+
+/* ─── Digital Signage Transition Animations ───────────────────────────────── */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rotateIn {
+  from { transform: rotate(-180deg) scale(0.5); opacity: 0; }
+  to { transform: rotate(0) scale(1); opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes flipIn {
+  from { transform: perspective(400px) rotateY(90deg); opacity: 0; }
+  to { transform: perspective(400px) rotateY(0); opacity: 1; }
+}
+
+.pl-anim-slide {
+  animation-name: slideInRight;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pl-anim-fade {
+  animation-name: fadeIn;
+  animation-fill-mode: forwards;
+  animation-timing-function: ease-out;
+}
+
+.pl-anim-rotate {
+  animation-name: rotateIn;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pl-anim-zoom {
+  animation-name: zoomIn;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pl-anim-flip {
+  animation-name: flipIn;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  backface-visibility: hidden;
+}
+
+.pl-anim-none {
+  animation: none !important;
+}
