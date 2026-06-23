@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import {
   CalendarRange, ChevronLeft, ChevronRight, Clock, Globe
 } from 'lucide-react';
+import CustomSelect from '@/components/shared/CustomSelect';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,6 +123,13 @@ export default function CalendarPage() {
   const days = useMemo(() => buildCalendarDays(viewDate.getFullYear(), viewDate.getMonth()), [viewDate]);
   const currentMonthDays = days.filter(d => d.getMonth() === viewDate.getMonth());
 
+  const timezoneOptions = useMemo(() => {
+    return TIMEZONES.map(tz => ({
+      value: tz,
+      label: `${tz.replace(/_/g, ' ')} (${getTzOffset(tz)})`
+    }));
+  }, [tick]);
+
   function prevMonth() {
     setViewDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   }
@@ -153,16 +161,14 @@ export default function CalendarPage() {
         <div className="clock-card">
           <div className="clock-tz-row">
             <Globe size={14} />
-            <select
-              className="tz-select"
+            <CustomSelect
+              className="compact"
+              wrapperClassName="tz-select-wrapper"
               value={primaryTz}
               onChange={e => setPrimaryTz(e.target.value)}
               id="primary-tz-select"
-            >
-              {TIMEZONES.map(tz => (
-                <option key={tz} value={tz}>{tz.replace('_', ' ')} ({getTzOffset(tz)})</option>
-              ))}
-            </select>
+              options={timezoneOptions}
+            />
           </div>
           <div className="clock-time">{formatTime(liveDate, primaryTz)}</div>
           <div className="clock-date">{formatDateInTz(liveDate, primaryTz)}</div>
@@ -178,16 +184,14 @@ export default function CalendarPage() {
         <div className="clock-card clock-card-secondary">
           <div className="clock-tz-row">
             <Globe size={14} />
-            <select
-              className="tz-select"
+            <CustomSelect
+              className="compact"
+              wrapperClassName="tz-select-wrapper"
               value={compareTz}
               onChange={e => setCompareTz(e.target.value)}
               id="compare-tz-select"
-            >
-              {TIMEZONES.map(tz => (
-                <option key={tz} value={tz}>{tz.replace('_', ' ')} ({getTzOffset(tz)})</option>
-              ))}
-            </select>
+              options={timezoneOptions}
+            />
           </div>
           <div className="clock-time clock-time-secondary">{formatTime(liveDate, compareTz)}</div>
           <div className="clock-date">{formatDateInTz(liveDate, compareTz)}</div>
@@ -262,8 +266,8 @@ export default function CalendarPage() {
         .clock-row { display: flex; align-items: stretch; gap: 1rem; margin-bottom: 1.5rem; }
         .clock-card { flex: 1; background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 1.5rem; display: flex; flex-direction: column; gap: .4rem; }
         .clock-card-secondary { border-color: rgba(99,102,241,.3); background: linear-gradient(135deg, rgba(99,102,241,.06), rgba(139,92,246,.04)); }
-        .clock-tz-row { display: flex; align-items: center; gap: .5rem; color: var(--text-muted); }
-        .tz-select { background: transparent; border: none; font-size: .78rem; color: var(--text-muted); cursor: pointer; outline: none; max-width: 220px; }
+        .clock-tz-row { display: flex; align-items: center; gap: .5rem; color: var(--text-muted); width: 100%; }
+        .tz-select-wrapper { flex: 1; max-width: 240px; }
         .clock-time { font-size: 2.4rem; font-weight: 800; letter-spacing: -.02em; line-height: 1; margin-top: .25rem; }
         .clock-time-secondary { color: var(--accent); }
         .clock-date { font-size: .8rem; color: var(--text-muted); }

@@ -9,6 +9,7 @@ import {
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { useSocketContext } from '@/context/SocketContext';
 import { useLanguage } from '@/context/LanguageContext';
+import CustomSelect from '@/components/shared/CustomSelect';
 
 interface Screen {
   id: string;
@@ -155,25 +156,16 @@ export default function ScreenTagDetailPage() {
           <div className="form-group">
             <label className="field-label">{t('SCREENS.active_schedule')}</label>
             <div className="select-wrap">
-              <select
+              <CustomSelect
                 id="schedule-assign-select"
-                className="form-select"
                 value={selectedSchedule?.id || 0}
                 onChange={e => {
                   const sched = schedules.find(s => s.id === Number(e.target.value));
                   if (sched) handleAssignSchedule(sched);
                 }}
                 disabled={assigning}
-              >
-                {schedules.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-              {assigning ? (
-                <RefreshCw size={13} className="select-arrow spin" />
-              ) : (
-                <ChevronDown size={13} className="select-arrow" />
-              )}
+                options={schedules.map(s => ({ value: s.id, label: s.name }))}
+              />
             </div>
           </div>
         </div>

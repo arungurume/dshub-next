@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { ContentSelectPopup } from '@/components/shared/ContentSelectPopup';
+import CustomSelect from '@/components/shared/CustomSelect';
 
 export default function EditScreenPage() {
   const router = useRouter();
@@ -193,32 +194,22 @@ export default function EditScreenPage() {
 
           <div className="form-group">
             <label className="field-label"><Tag size={13} /> Screen Tag</label>
-            <div className="select-wrap">
-              <select
-                id="tag-select"
-                className="form-select"
-                value={selectedTagId}
-                onChange={e => setSelectedTagId(Number(e.target.value))}
-              >
-                {tags.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-              <ChevronDown size={13} className="select-arrow" />
-            </div>
+            <CustomSelect
+              id="tag-select"
+              value={selectedTagId}
+              onChange={e => setSelectedTagId(Number(e.target.value))}
+              options={tags.map(t => ({ value: t.id, label: t.name }))}
+            />
           </div>
 
           <div className="form-group">
             <label className="field-label"><Calendar size={13} /> Default Schedule</label>
-            <div className="select-wrap">
-              <select
-                id="schedule-select"
-                className="form-select"
-                value={selectedScheduleId}
-                onChange={e => setSelectedScheduleId(Number(e.target.value))}
-              >
-                {schedules.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              <ChevronDown size={13} className="select-arrow" />
-            </div>
+            <CustomSelect
+              id="schedule-select"
+              value={selectedScheduleId}
+              onChange={e => setSelectedScheduleId(Number(e.target.value))}
+              options={schedules.map(s => ({ value: s.id, label: s.name }))}
+            />
           </div>
 
           {/* Default Content Section */}

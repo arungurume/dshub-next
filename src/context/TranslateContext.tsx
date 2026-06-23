@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { TRANSLATIONS, SUPPORTED_LANGUAGES, getStoredLang, storeLang, t as dotT } from '@/lib/i18n';
+import { TRANSLATIONS, SUPPORTED_LANGUAGES, getStoredLang, storeLang, t as dotT, SupportedLang } from '@/lib/i18n';
 
 type TranslationsObject = Record<string, any>;
 
@@ -36,9 +36,11 @@ const getCookie = (name: string): string | null => {
   return null;
 };
 
-export const TranslateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<string>('en');
-  const [translations, setTranslations] = useState<TranslationsObject>({});
+export const TranslateProvider: React.FC<{ children: React.ReactNode; defaultLang?: string }> = ({ children, defaultLang }) => {
+  const [language, setLanguageState] = useState<string>(defaultLang || 'en');
+  const [translations, setTranslations] = useState<TranslationsObject>(
+    TRANSLATIONS[(defaultLang || 'en') as SupportedLang] ?? TRANSLATIONS.en
+  );
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Load language preference on mount — reads ds_lang (same key as admin LanguageContext)

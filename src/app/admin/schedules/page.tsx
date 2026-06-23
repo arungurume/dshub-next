@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
+import CustomSelect from '@/components/shared/CustomSelect';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -1083,17 +1084,15 @@ export default function SchedulesPage() {
           )}
 
           {viewMode === 'calendar' && schedules.length > 0 && (
-            <select
+            <CustomSelect
               className="cal-sched-select"
+              wrapperClassName="cal-sched-select-wrapper"
               value={calScheduleId}
               onChange={e => setCalScheduleId(e.target.value)}
               id="cal-schedule-select"
-            >
-              <option value="">— Select a schedule —</option>
-              {schedules.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+              placeholder="— Select a schedule —"
+              options={schedules.map(s => ({ value: s.id, label: s.name }))}
+            />
           )}
 
           <button
@@ -1138,27 +1137,25 @@ export default function SchedulesPage() {
             </div>
             <div className="filter-group">
               <label className="filter-label">Screen</label>
-              <select
+              <CustomSelect
                 className="filter-input"
                 value={filterScreen}
                 onChange={e => setFilterScreen(e.target.value)}
                 id="filter-screen"
-              >
-                <option value="">All Screens</option>
-                {screens.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+                placeholder="All Screens"
+                options={screens.map(s => ({ value: s.id, label: s.name }))}
+              />
             </div>
             <div className="filter-group">
               <label className="filter-label">Playlist</label>
-              <select
+              <CustomSelect
                 className="filter-input"
                 value={filterPlaylist}
                 onChange={e => setFilterPlaylist(e.target.value)}
                 id="filter-playlist"
-              >
-                <option value="">All Playlists</option>
-                {playlists.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+                placeholder="All Playlists"
+                options={playlists.map(p => ({ value: p.id, label: p.name }))}
+              />
             </div>
           </div>
           <div className="filter-actions">
@@ -1690,6 +1687,10 @@ export default function SchedulesPage() {
         }
         .search-input:focus { border-color: var(--accent); }
 
+        .cal-sched-select-wrapper {
+          width: auto;
+          min-width: 220px;
+        }
         .cal-sched-select {
           background: var(--card-bg, #fff);
           border: 1px solid var(--border, #e5e7eb);

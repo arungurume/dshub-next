@@ -162,7 +162,7 @@ export default function DashboardMainPage() {
             {!currentUser ? (
               <span className="db-location-loading">{t('DASHBOARD.loading')}</span>
             ) : (
-              <div className="db-location-dropdown-wrapper">
+              <div className="db-location-actions">
                 {locations.length === 0 ? (
                   <button
                     onClick={() => router.push('/admin/locations/0')}
@@ -171,14 +171,23 @@ export default function DashboardMainPage() {
                     + {t('DASHBOARD.add_location')}
                   </button>
                 ) : (
-                  <button
-                    disabled={switching}
-                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="db-location-trigger-btn"
-                  >
-                    {currentLocation?.name || t('DASHBOARD.select_location')}
-                    <ChevronDown size={13} className={`db-chevron ${isDropdownOpen ? 'open' : ''}`} />
-                  </button>
+                  <>
+                    <button
+                      disabled={switching}
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="db-location-trigger-btn"
+                    >
+                      {currentLocation?.name || t('DASHBOARD.select_location')}
+                      <ChevronDown size={13} className={`db-chevron ${isDropdownOpen ? 'open' : ''}`} />
+                    </button>
+                    <button
+                      onClick={() => router.push('/admin/locations/0')}
+                      className="db-location-add-btn"
+                      style={{ marginLeft: '0.4rem' }}
+                    >
+                      + {t('DASHBOARD.add_location')}
+                    </button>
+                  </>
                 )}
 
                 {isDropdownOpen && (
@@ -569,6 +578,11 @@ export default function DashboardMainPage() {
           cursor: pointer;
           transition: all 0.15s;
         }
+        .db-location-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          }
         .db-location-add-btn:hover {
           background: rgba(99, 102, 241, 0.18);
         }

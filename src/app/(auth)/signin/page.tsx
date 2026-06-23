@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Script from 'next/script';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Sun, Lightbulb, Loader2, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Sun, Lightbulb, Loader2, ArrowRight, AlertCircle, X } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from '@/context/TranslateContext';
 import { useDSStore } from '@/store/useDSStore';
@@ -28,6 +28,7 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const {
     register,
@@ -92,6 +93,7 @@ export default function SignInPage() {
 
   const handleGoogleCredentialResponse = async (gResponse: any) => {
     setIsLoading(true);
+    setLoginError(null);
     try {
       const response = await umsApi.post('/auth/signin/google', null, {
         headers: {
@@ -114,7 +116,7 @@ export default function SignInPage() {
       router.replace('/admin/dashboard');
     } catch (err: any) {
       console.error('Google Auth login error:', err);
-      toast.error(err.response?.data?.message || 'Google authentication failed');
+      setLoginError(err.response?.data?.message || 'Google authentication failed');
     } finally {
       setIsLoading(false);
     }
@@ -122,6 +124,7 @@ export default function SignInPage() {
 
   const onSubmit = async (data: LoginFields) => {
     setIsLoading(true);
+    setLoginError(null);
     try {
       const response = await umsApi.post('/auth/signin/local', {
         userName: data.username,
@@ -142,7 +145,7 @@ export default function SignInPage() {
       router.replace('/admin/dashboard');
     } catch (err: any) {
       console.error('Local login error:', err);
-      toast.error(err.response?.data?.message || 'Invalid username or password');
+      setLoginError(err.response?.data?.message || 'Invalid username or password');
     } finally {
       setIsLoading(false);
     }
@@ -374,6 +377,31 @@ export default function SignInPage() {
               )}
             </div>
 
+            {/* Inline error banner — anchored inside the form, never overlaps hero image */}
+            {loginError && (
+              <div
+                role="alert"
+                className="flex items-start gap-3 px-4 py-3 rounded-[12px] text-sm font-medium"
+                style={{
+                  background: theme === 'dark' ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.35)',
+                  color: theme === 'dark' ? '#fca5a5' : '#b91c1c',
+                  animation: 'fadeSlideIn 0.2s ease',
+                }}
+              >
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span className="flex-1 leading-snug">{loginError}</span>
+                <button
+                  type="button"
+                  onClick={() => setLoginError(null)}
+                  className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+                  aria-label="Dismiss error"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isLoading}
@@ -404,6 +432,10 @@ export default function SignInPage() {
 
         {/* Local Styles for Premium Input Fields and Buttons */}
         <style>{`
+          @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
           .login-input {
             height: 52px;
             border-radius: 14px;

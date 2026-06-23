@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import CustomSelect from '@/components/shared/CustomSelect';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -53,6 +54,7 @@ export default function LocationDetailPage() {
     handleSubmit,
     reset,
     setValue,
+    control,
     formState: { errors },
   } = useForm<LocationForm>({ resolver: zodResolver(locationSchema) });
 
@@ -230,13 +232,18 @@ export default function LocationDetailPage() {
                 <div className="form-group">
                   <label>{t('LOCATIONS.timezone')}</label>
                   <div className="relative">
-                    <select {...register('timezone')} id="loc-timezone">
-                      <option value="">{t('LOCATIONS.select_timezone')}</option>
-                      {COMMON_TIMEZONES.map(tz => (
-                        <option key={tz} value={tz}>{tz}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={14} className="absolute right-3 top-3.5 text-slate-400 pointer-events-none" />
+                    <Controller
+                      name="timezone"
+                      control={control}
+                      render={({ field }) => (
+                        <CustomSelect
+                          {...field}
+                          id="loc-timezone"
+                          placeholder={t('LOCATIONS.select_timezone')}
+                          options={COMMON_TIMEZONES.map(tz => ({ value: tz, label: tz }))}
+                        />
+                      )}
+                    />
                   </div>
                   {errors.timezone && <span className="field-error">{t('LOCATIONS.err_timezone_required')}</span>}
                 </div>

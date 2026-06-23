@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
+import CustomSelect from '@/components/shared/CustomSelect';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -67,7 +68,7 @@ function UserModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<UserForm>({
+  const { register, handleSubmit, reset, control, formState: { errors, isSubmitting } } = useForm<UserForm>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       firstName: initial?.firstName || '',
@@ -127,18 +128,32 @@ function UserModal({
           <div className="form-row-2">
             <div className="form-group">
               <label>Role</label>
-              <select {...register('roleId')}>
-                <option value="">Select role</option>
-                {roles.map(r => <option key={r.id} value={r.id}>{r.name.replace(/_/g, ' ')}</option>)}
-              </select>
+              <Controller
+                name="roleId"
+                control={control}
+                render={({ field }) => (
+                  <CustomSelect
+                    {...field}
+                    placeholder="Select role"
+                    options={roles.map(r => ({ value: r.id, label: r.name.replace(/_/g, ' ') }))}
+                  />
+                )}
+              />
               {errors.roleId && <span className="field-error">{errors.roleId.message}</span>}
             </div>
             <div className="form-group">
               <label>Location</label>
-              <select {...register('locationId')}>
-                <option value="">Select location</option>
-                {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
+              <Controller
+                name="locationId"
+                control={control}
+                render={({ field }) => (
+                  <CustomSelect
+                    {...field}
+                    placeholder="Select location"
+                    options={locations.map(l => ({ value: l.id, label: l.name }))}
+                  />
+                )}
+              />
               {errors.locationId && <span className="field-error">{errors.locationId.message}</span>}
             </div>
           </div>

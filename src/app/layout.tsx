@@ -5,6 +5,7 @@ import { SocketProvider } from "@/context/SocketContext";
 import { HashRedirect } from "@/components/shared/HashRedirect";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { Toaster } from "sonner";
+import { headers, cookies } from "next/headers";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,11 +23,39 @@ export const metadata: Metadata = {
   description: "Enterprise Digital Signage Content Management System",
 };
 
-export default function RootLayout({
+function getBrowserLanguage(acceptLanguage: string): string {
+  if (!acceptLanguage) return 'en';
+  const languages = acceptLanguage.split(',').map(lang => {
+    const [locale] = lang.split(';');
+    return locale.trim().split('-')[0].toLowerCase();
+  });
+  const supported = ['en', 'es', 'de', 'fr'];
+  for (const lang of languages) {
+    if (supported.includes(lang)) {
+      return lang;
+    }
+  }
+  return 'en';
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const storedLang = cookieStore.get("NEXT_LOCALE")?.value || cookieStore.get("ds_lang")?.value;
+  
+  let defaultLang = 'en';
+  const supported = ['en', 'es', 'de', 'fr'];
+  if (storedLang && supported.includes(storedLang)) {
+    defaultLang = storedLang;
+  } else {
+    const headersList = await headers();
+    const acceptLanguage = headersList.get("accept-language") || "";
+    defaultLang = getBrowserLanguage(acceptLanguage);
+  }
+
   return (
     // Start with 'light' class — ThemeProvider will swap to 'dark' if user chose it
     <html lang="en" className="h-full scroll-smooth light">
@@ -34,7 +63,7 @@ export default function RootLayout({
         className={`${inter.variable} ${outfit.variable} font-sans min-h-full flex flex-col antialiased`}
         style={{ backgroundColor: 'var(--bg-base)', color: 'var(--text)' }}
       >
-        <TranslateProvider>
+        <TranslateProvider defaultLang={defaultLang}>
           <SocketProvider>
             <ThemeProvider>
               <HashRedirect />
