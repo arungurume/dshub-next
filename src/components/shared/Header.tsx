@@ -93,7 +93,7 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="glass-panel border-b border-white/5 h-16 sticky top-0 flex items-center justify-between px-6 z-20">
+    <header className="glass-panel border-b border-white/5 h-16 sticky top-0 flex items-center justify-between px-6 z-[25]">
       
       {/* Organization display */}
       <div className="flex items-center gap-2">

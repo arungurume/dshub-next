@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  ArrowLeft, FolderOpen, RefreshCw, ExternalLink, Calendar, User, Info, FileText, Check, ChevronLeft, ChevronRight, X
+  ArrowLeft, FolderOpen, RefreshCw, ExternalLink, Calendar, User, Info, FileText, Check, ChevronLeft, ChevronRight, X, Pencil
 } from 'lucide-react';
 import { cmsApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -241,53 +241,40 @@ export default function CanvaDesignDetailPage() {
       {/* Header back link */}
       <div className="detail-header">
         <button className="back-btn" onClick={() => router.push('/admin/templates')}>
-          <ArrowLeft size={15} className="arrow-icon" />
-          <span>Back to Templates</span>
+          <ArrowLeft size={16} className="arrow-icon" />
+          <span>Back</span>
         </button>
       </div>
 
       {/* Two Column Grid */}
       <div className="detail-grid">
-        {/* Left Column: Design Image with Blurred Background Depth */}
+        {/* Left Column: Design Image */}
         <div className="image-section">
-          <div className="preview-container-wrapper">
-            <div className="preview-blur-bg" style={{ backgroundImage: `url(${previewSrc})` }} />
-            <div className={`preview-container ${aspectRatio}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewSrc || 'https://picsum.photos/id/10/800/600'}
-                alt={design?.title || 'Preview'}
-                className="main-preview-img"
-                onLoad={handleImageLoad}
-              />
-            </div>
+          <div className="preview-image-wrapper">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewSrc || 'https://picsum.photos/id/10/800/600'}
+              alt={design?.title || 'Preview'}
+              className="main-preview-img"
+              onLoad={handleImageLoad}
+            />
           </div>
         </div>
 
         {/* Right Column: Info and Actions */}
         <div className="info-section">
-          <div className="info-card">
+          <div className="info-content-wrapper">
             <h1 className="template-title">{design?.title || 'Untitled Design'}</h1>
             <span className="template-type">From your Canva account</span>
 
             <div className="action-buttons">
               <button className="btn-primary" onClick={handleEditInCanva}>
-                <ExternalLink size={14} style={{ marginRight: 6 }} /> Edit in Canva
+                <Pencil size={15} style={{ marginRight: 8 }} /> Edit in Canva
               </button>
             </div>
 
             {/* Metadata breakdown */}
             <div className="metadata-table">
-              <div className="meta-row">
-                <span className="lbl">Owner:</span>
-                <span className="val">{ownerName}</span>
-              </div>
-              {design?.type && (
-                <div className="meta-row">
-                  <span className="lbl">Type:</span>
-                  <span className="val">{design.type}</span>
-                </div>
-              )}
               <div className="meta-row">
                 <span className="lbl">Pages:</span>
                 <span className="val">{design?.page_count || 1}</span>
@@ -296,6 +283,16 @@ export default function CanvaDesignDetailPage() {
                 <div className="meta-row">
                   <span className="lbl">Last updated:</span>
                   <span className="val">{formatTimestamp(design.updated_at)}</span>
+                </div>
+              )}
+              <div className="meta-row">
+                <span className="lbl">Owner:</span>
+                <span className="val">{ownerName}</span>
+              </div>
+              {design?.type && (
+                <div className="meta-row">
+                  <span className="lbl">Type:</span>
+                  <span className="val">{design.type}</span>
                 </div>
               )}
             </div>
@@ -326,10 +323,9 @@ export default function CanvaDesignDetailPage() {
                   <div className="card-content">
                     <div className="card-header-row">
                       <span className="card-title">Save to File Manager</span>
-                      <span className="badge-rec">Recommended</span>
                     </div>
                     <p className="card-desc">
-                      Import this Canva design directly and save it as a high-resolution reusable asset in DSHub.
+                      Import this Canva design and save it as a reusable asset in DShub.
                     </p>
                   </div>
                 </div>
@@ -339,7 +335,7 @@ export default function CanvaDesignDetailPage() {
             {/* Folders Badge Section */}
             {folders.length > 0 && (
               <div className="folders-section">
-                <h3>Your Canva Folders</h3>
+                <h3>Your canva folders</h3>
                 <div className="folder-grid">
                   {folders.map((item, idx) => (
                     <a
@@ -349,7 +345,7 @@ export default function CanvaDesignDetailPage() {
                       rel="noopener noreferrer"
                       className="folder-badge"
                     >
-                      <FolderOpen size={12} style={{ marginRight: 4, opacity: 0.6 }} />
+                      <FolderOpen size={14} className="folder-icon" />
                       <span>{item.folder.name}</span>
                     </a>
                   ))}
@@ -395,8 +391,8 @@ export default function CanvaDesignDetailPage() {
 
       <style>{`
         .canva-detail-page {
-          padding: 2rem 3rem;
-          max-width: 1280px;
+          padding: 2.5rem 3rem;
+          max-width: 1400px;
           margin: 0 auto;
           animation: fadeIn 0.4s ease-out;
         }
@@ -423,30 +419,27 @@ export default function CanvaDesignDetailPage() {
 
         /* Header */
         .detail-header {
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
         }
         .back-btn {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          padding: 0.6rem 1.2rem;
-          border-radius: 12px;
+          gap: 0.35rem;
+          background: transparent;
+          border: none;
+          padding: 0;
           color: var(--text);
-          font-size: 0.85rem;
-          font-weight: 600;
+          font-size: 0.95rem;
+          font-weight: 500;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          transition: color 0.2s ease;
+          box-shadow: none;
         }
         .back-btn .arrow-icon {
           transition: transform 0.2s ease;
         }
         .back-btn:hover {
-          border-color: var(--accent);
-          color: var(--accent);
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+          color: #7D2AE8;
         }
         .back-btn:hover .arrow-icon {
           transform: translateX(-3px);
@@ -455,119 +448,82 @@ export default function CanvaDesignDetailPage() {
         /* Layout Grid */
         .detail-grid {
           display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
-          gap: 3.5rem;
+          grid-template-columns: 1.25fr 0.75fr;
+          gap: 4rem;
           align-items: start;
+          margin-top: 1rem;
         }
 
-        /* Gallery/Preview Container with Glass Background Depth */
+        /* Gallery/Preview Container */
         .image-section {
           width: 100%;
         }
-        .preview-container-wrapper {
-          position: relative;
-          background: rgba(15, 23, 42, 0.03);
-          border: 1px solid var(--border);
-          border-radius: 24px;
-          padding: 2.5rem;
-          overflow: hidden;
+        .preview-image-wrapper {
           display: flex;
-          align-items: center;
           justify-content: center;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-          min-height: 480px;
-        }
-        html.dark .preview-container-wrapper {
-          background: rgba(255, 255, 255, 0.01);
-        }
-        .preview-blur-bg {
-          position: absolute;
-          inset: -20px;
-          background-size: cover;
-          background-position: center;
-          filter: blur(40px) opacity(0.12);
-          z-index: 0;
-          transform: scale(1.05);
-          pointer-events: none;
-        }
-        .preview-container {
-          position: relative;
-          z-index: 1;
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          border-radius: 16px;
-          overflow: hidden;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.12);
-          transition: all 0.3s ease;
-          max-width: 100%;
-        }
-        .preview-container.portrait {
-          aspect-ratio: 1 / 1.414;
-          width: 380px;
-        }
-        .preview-container.landscape {
-          aspect-ratio: 1.6 / 1;
-          width: 580px;
-        }
-        .preview-container.square {
-          aspect-ratio: 1 / 1;
-          width: 460px;
+          align-items: flex-start;
+          width: 100%;
+          background: transparent;
+          border: none;
+          box-shadow: none;
         }
         .main-preview-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+          width: auto;
+          max-width: 100%;
+          max-height: 82vh;
+          object-fit: contain;
+          border-radius: 4px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
         }
 
         /* Info Section */
-        .info-card {
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          border-radius: 24px;
-          padding: 2.5rem;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        .info-content-wrapper {
+          background: transparent;
+          border: none;
+          padding: 0;
+          box-shadow: none;
         }
         .template-title {
-          font-size: 1.75rem;
-          font-weight: 800;
-          margin: 0 0 0.5rem;
+          font-size: 1.85rem;
+          font-weight: 700;
+          margin: 0 0 0.25rem;
           line-height: 1.25;
-          letter-spacing: -0.02em;
           color: var(--text);
         }
         .template-type {
-          font-size: 0.72rem;
+          font-size: 0.85rem;
           color: var(--text-muted);
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
+          font-weight: 400;
+          text-transform: none;
+          letter-spacing: normal;
         }
 
         /* Action button */
         .action-buttons {
-          margin-top: 2rem;
+          margin-top: 1.5rem;
           margin-bottom: 2rem;
         }
         .btn-primary {
-          width: 100%;
-          display: flex;
+          width: auto;
+          min-width: 140px;
+          display: inline-flex;
           align-items: center;
           justify-content: center;
-          background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+          background: #7D2AE8;
           color: #ffffff;
           border: none;
-          padding: 0.9rem;
-          border-radius: 14px;
-          font-size: 0.95rem;
-          font-weight: 700;
+          padding: 0.65rem 1.5rem;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 4px 18px rgba(99, 102, 241, 0.25);
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(125, 42, 232, 0.15);
         }
         .btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
-          filter: brightness(1.05);
+          background: #6a21cb;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.25);
         }
         .btn-primary:active {
           transform: translateY(0);
@@ -577,71 +533,90 @@ export default function CanvaDesignDetailPage() {
         .metadata-table {
           display: flex;
           flex-direction: column;
-          gap: 0.85rem;
-          border-top: 1px solid var(--border);
-          border-bottom: 1px solid var(--border);
-          padding: 1.5rem 0;
-          margin-bottom: 2rem;
+          gap: 0.75rem;
+          border: none;
+          padding: 0;
+          margin-bottom: 2.5rem;
         }
         .meta-row {
           display: flex;
-          justify-content: space-between;
-          font-size: 0.88rem;
+          align-items: baseline;
+          font-size: 0.85rem;
         }
         .meta-row .lbl {
-          color: var(--text-muted);
-          font-weight: 500;
+          color: #4b5563;
+          font-weight: 700;
+          text-transform: uppercase;
+          font-size: 0.72rem;
+          letter-spacing: 0.05em;
+          width: 130px;
+          flex-shrink: 0;
         }
         .meta-row .val {
-          font-weight: 600;
+          font-weight: 500;
+          color: #1f2937;
+        }
+        html.dark .meta-row .lbl {
+          color: var(--text-muted);
+        }
+        html.dark .meta-row .val {
           color: var(--text);
         }
 
         /* Save card section */
         .actions-section h3, .folders-section h3 {
-          font-size: 0.72rem;
-          font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: var(--text-muted);
-          margin: 0 0 1rem;
+          font-size: 0.95rem;
+          font-weight: 700;
+          text-transform: none;
+          letter-spacing: normal;
+          color: var(--text);
+          margin: 0 0 0.85rem;
         }
         .action-card {
           display: flex;
-          gap: 1.25rem;
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.03) 100%);
-          border: 1px dashed rgba(99, 102, 241, 0.3);
-          border-radius: 16px;
-          padding: 1.5rem;
+          align-items: center;
+          gap: 1rem;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 1.25rem 1.5rem;
           cursor: pointer;
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: all 0.2s ease;
         }
         .action-card:hover {
-          background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.05) 100%);
-          border-color: #6366f1;
-          transform: translateY(-2px) scale(1.01);
-          box-shadow: 0 8px 24px rgba(99, 102, 241, 0.06);
+          background: #f8fafc;
+          border-color: #cbd5e1;
+        }
+        html.dark .action-card {
+          background: rgba(255, 255, 255, 0.02);
+          border-color: var(--border);
+        }
+        html.dark .action-card:hover {
+          background: rgba(255, 255, 255, 0.04);
+          border-color: rgba(255, 255, 255, 0.15);
         }
         .action-card.saved {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 100%);
-          border-style: solid;
-          border-color: rgba(34, 197, 94, 0.3);
+          background: rgba(34, 197, 94, 0.02);
+          border-color: rgba(34, 197, 94, 0.2);
         }
         .action-card.saved:hover {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);
-          border-color: #22c55e;
-          box-shadow: 0 8px 24px rgba(34, 197, 94, 0.06);
+          background: rgba(34, 197, 94, 0.04);
+          border-color: rgba(34, 197, 94, 0.4);
         }
         .icon-box {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          background: rgba(99, 102, 241, 0.1);
-          color: #6366f1;
+          width: 42px;
+          height: 42px;
+          border-radius: 8px;
+          background: #f1f5f9;
+          color: #475569;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+        }
+        html.dark .icon-box {
+          background: rgba(255, 255, 255, 0.05);
+          color: var(--text-muted);
         }
         .icon-box.saved {
           background: rgba(34, 197, 94, 0.1);
@@ -650,7 +625,7 @@ export default function CanvaDesignDetailPage() {
         .card-content {
           display: flex;
           flex-direction: column;
-          gap: 0.35rem;
+          gap: 0.15rem;
         }
         .card-header-row {
           display: flex;
@@ -659,33 +634,23 @@ export default function CanvaDesignDetailPage() {
         }
         .card-title {
           font-size: 0.95rem;
-          font-weight: 700;
+          font-weight: 600;
           color: var(--text);
         }
-        .badge-rec {
-          background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-          color: #ffffff;
-          font-size: 0.6rem;
-          font-weight: 800;
-          padding: 0.2rem 0.5rem;
-          border-radius: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
         .badge-saved {
-          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          background: #22c55e;
           color: #ffffff;
-          font-size: 0.6rem;
-          font-weight: 800;
-          padding: 0.2rem 0.5rem;
-          border-radius: 6px;
+          font-size: 0.65rem;
+          font-weight: 700;
+          padding: 0.15rem 0.4rem;
+          border-radius: 4px;
           text-transform: uppercase;
           letter-spacing: 0.05em;
         }
         .card-desc {
-          font-size: 0.8rem;
+          font-size: 0.825rem;
           color: var(--text-muted);
-          line-height: 1.45;
+          line-height: 1.4;
           margin: 0;
         }
 
@@ -701,21 +666,30 @@ export default function CanvaDesignDetailPage() {
         .folder-badge {
           display: inline-flex;
           align-items: center;
-          background: var(--sidebar-bg);
-          border: 1px solid var(--border);
-          padding: 0.45rem 1rem;
-          border-radius: 24px;
-          font-size: 0.8rem;
-          color: var(--text);
-          font-weight: 600;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          padding: 0.4rem 0.9rem;
+          border-radius: 9999px;
+          font-size: 0.85rem;
+          color: #475569;
+          font-weight: 500;
           text-decoration: none;
           transition: all 0.2s;
+          gap: 0.35rem;
+        }
+        html.dark .folder-badge {
+          background: rgba(255, 255, 255, 0.03);
+          border-color: var(--border);
+          color: var(--text-muted);
         }
         .folder-badge:hover {
-          border-color: #6366f1;
-          color: #6366f1;
-          background: rgba(99, 102, 241, 0.02);
-          transform: translateY(-1px);
+          border-color: #cbd5e1;
+          background: #e2e8f0;
+        }
+        html.dark .folder-badge:hover {
+          border-color: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.08);
+          color: var(--text);
         }
 
         /* Related designs list */

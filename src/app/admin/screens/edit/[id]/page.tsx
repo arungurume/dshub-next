@@ -199,6 +199,7 @@ export default function EditScreenPage() {
               value={selectedTagId}
               onChange={e => setSelectedTagId(Number(e.target.value))}
               options={tags.map(t => ({ value: t.id, label: t.name }))}
+              searchable={true}
             />
           </div>
 
@@ -209,6 +210,7 @@ export default function EditScreenPage() {
               value={selectedScheduleId}
               onChange={e => setSelectedScheduleId(Number(e.target.value))}
               options={schedules.map(s => ({ value: s.id, label: s.name }))}
+              searchable={true}
             />
           </div>
 

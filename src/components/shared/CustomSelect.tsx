@@ -11,20 +11,19 @@ export interface CustomSelectProps extends Omit<React.SelectHTMLAttributes<HTMLS
   options: SelectOption[];
   placeholder?: string;
   wrapperClassName?: string;
+  searchable?: boolean;
 }
 
 const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
-  ({ options, placeholder, className, wrapperClassName, value, onChange, disabled, ...rest }, ref) => {
+  ({ options, placeholder, className, wrapperClassName, value, onChange, disabled, searchable, ...rest }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
-
-    // Internal state for uncontrolled usage, synced with 'value' if controlled
     const [internalValue, setInternalValue] = useState<string | number>('');
-
-    // Portal menu position
     const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+    const [searchTerm, setSearchTerm] = useState('');
 
     const containerRef = useRef<HTMLDivElement>(null);
     const nativeSelectRef = useRef<HTMLSelectElement | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Sync external value to internal
     useEffect(() => {
@@ -32,6 +31,24 @@ const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
         setInternalValue(value as string | number);
       }
     }, [value]);
+
+    // Clear search term when menu closes
+    useEffect(() => {
+      if (!isOpen) {
+        setSearchTerm('');
+      }
+    }, [isOpen]);
+
+    const isSearchEnabled = searchable ?? (options.length > 8);
+
+    // Autofocus search input when menu opens
+    useEffect(() => {
+      if (isOpen && isSearchEnabled) {
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 50);
+      }
+    }, [isOpen, isSearchEnabled]);
 
     // Calculate menu position from the trigger rect
     function updateMenuPosition() {
@@ -59,7 +76,6 @@ const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
         if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-          // Also check if click was inside the portal menu
           const menu = document.getElementById('custom-select-portal-menu');
           if (menu && menu.contains(event.target as Node)) return;
           setIsOpen(false);
@@ -97,14 +113,12 @@ const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
       setInternalValue(optionValue);
       setIsOpen(false);
 
-      // If we have a native select, update its value and dispatch a change event so RHF catches it
       if (nativeSelectRef.current) {
         nativeSelectRef.current.value = String(optionValue);
         const event = new Event('change', { bubbles: true });
         nativeSelectRef.current.dispatchEvent(event);
       }
 
-      // Also call standard onChange if passed directly
       if (onChange) {
         const e = {
           target: { value: String(optionValue), name: rest.name },
@@ -117,36 +131,78 @@ const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
     const selectedOption = options.find(o => String(o.value) === String(internalValue));
     const displayLabel = selectedOption ? selectedOption.label : (placeholder || 'Select...');
 
+    const filteredOptions = options.filter(opt =>
+      opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     const menuContent = (
       <div
         id="custom-select-portal-menu"
         className="custom-select-menu"
-        style={menuStyle}
+        style={{
+          ...menuStyle,
+          maxHeight: 'none',
+          overflowY: 'visible',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
-        {placeholder && (
-          <div
-            className={`custom-select-option ${internalValue === '' ? 'selected' : ''}`}
-            onClick={() => handleSelect('')}
-          >
-            <span className="placeholder-text">{placeholder}</span>
+        {isSearchEnabled && (
+          <div className="custom-select-search-wrap" style={{ padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="custom-select-search-input"
+              style={{
+                width: '100%',
+                padding: '6px 10px',
+                fontSize: '0.8rem',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                background: 'var(--input-bg, rgba(0,0,0,0.02))',
+                color: 'var(--text)',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
           </div>
         )}
-        {options.map((opt) => (
-          <div
-            key={opt.value}
-            className={`custom-select-option ${String(opt.value) === String(internalValue) ? 'selected' : ''}`}
-            onClick={() => handleSelect(opt.value)}
-          >
-            <span>{opt.label}</span>
-            {String(opt.value) === String(internalValue) && <Check size={14} className="check-icon" />}
-          </div>
-        ))}
+        <div className="custom-select-options-list" style={{ maxHeight: '200px', overflowY: 'auto', overflowX: 'hidden', padding: '0.125rem' }}>
+          {placeholder && !searchTerm && (
+            <div
+              className={`custom-select-option ${internalValue === '' ? 'selected' : ''}`}
+              onClick={() => handleSelect('')}
+            >
+              <span className="placeholder-text">{placeholder}</span>
+            </div>
+          )}
+          {filteredOptions.length === 0 ? (
+            <div style={{ padding: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+              No options found
+            </div>
+          ) : (
+            filteredOptions.map((opt) => (
+              <div
+                key={opt.value}
+                className={`custom-select-option ${String(opt.value) === String(internalValue) ? 'selected' : ''}`}
+                onClick={() => handleSelect(opt.value)}
+              >
+                <span>{opt.label}</span>
+                {String(opt.value) === String(internalValue) && <Check size={14} className="check-icon" />}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     );
 
     return (
       <div className={`custom-select-wrapper ${wrapperClassName || ''}`} ref={containerRef}>
-        {/* Hidden native select for form libraries like react-hook-form */}
         <select
           ref={setRefs}
           value={internalValue}
@@ -167,7 +223,6 @@ const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
           ))}
         </select>
 
-        {/* Custom UI trigger */}
         <div
           className={`custom-select-control ${isOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${className || ''}`}
           onClick={handleToggle}
@@ -178,7 +233,6 @@ const CustomSelect = forwardRef<HTMLSelectElement, CustomSelectProps>(
           <ChevronDown size={14} className={`custom-select-icon ${isOpen ? 'rotate' : ''}`} />
         </div>
 
-        {/* Portal menu — rendered in body to escape overflow:hidden ancestors */}
         {isOpen && typeof document !== 'undefined' && createPortal(menuContent, document.body)}
       </div>
     );

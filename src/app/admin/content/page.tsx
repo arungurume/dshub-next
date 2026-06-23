@@ -126,6 +126,59 @@ function PreviewModal({ item, onClose }: { item: ContentItem; onClose: () => voi
   );
 }
 
+// ─── Confirm modal ────────────────────────────────────────────────────────────
+
+function ConfirmModal({ title, message, confirmText = 'Confirm', isDanger = false, onClose, onConfirm }: {
+  title: string;
+  message: string;
+  confirmText?: string;
+  isDanger?: boolean;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleConfirm() {
+    setLoading(true);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="small-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="small-modal-header">
+          <h3>{title}</h3>
+          <button onClick={onClose}><X size={16} /></button>
+        </div>
+        <div className="small-modal-body">
+          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text)', lineHeight: 1.5 }}>
+            {message}
+          </p>
+        </div>
+        <div className="small-modal-footer">
+          <button className="btn-ghost" onClick={onClose} disabled={loading}>Cancel</button>
+          <button
+            className={isDanger ? "btn-danger-custom" : "btn-primary"}
+            onClick={handleConfirm}
+            disabled={loading}
+            id="confirm-modal-action-btn"
+          >
+            {loading && <RefreshCw size={13} className="spin" style={{ marginRight: 6 }} />}
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Rename modal ─────────────────────────────────────────────────────────────
 
 function RenameModal({ item, onClose, onSaved }: { item: ContentItem; onClose: () => void; onSaved: () => void }) {
@@ -418,6 +471,13 @@ export default function ContentManagerPage() {
   const [showPlaylistsItem, setShowPlaylistsItem] = useState<ContentItem | null>(null);
   const [activeMenu, setActiveMenu]           = useState<string | null>(null);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [confirmState, setConfirmState]       = useState<{
+    title: string;
+    message: string;
+    confirmText?: string;
+    isDanger?: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -585,113 +645,141 @@ export default function ContentManagerPage() {
   }
 
   // ── Delete (works for ALL content types) ──
-  async function deleteItem(item: ContentItem) {
-    if (!confirm(`Delete "${item.originalName || item.name}"?`)) return;
-    try {
-      if (item.contentType === 'FOLDER') {
-        const { data } = await cmsApi.delete('/dc/folder', { data: { folderIds: [item.id] } });
-        if (Array.isArray(data) && data.length > 0) {
-          const res = data[0];
-          if (res.deleted) {
-            toast.success('Folder deleted');
+  function deleteItem(item: ContentItem) {
+    setConfirmState({
+      title: item.contentType === 'FOLDER' ? 'Delete Folder' : 'Delete File',
+      message: `Are you sure you want to delete "${item.originalName || item.name}"?`,
+      confirmText: 'Delete',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          if (item.contentType === 'FOLDER') {
+            const { data } = await cmsApi.delete('/dc/folder', { data: { folderIds: [item.id] } });
+            if (Array.isArray(data) && data.length > 0) {
+              const res = data[0];
+              if (res.deleted) {
+                toast.success('Folder deleted');
+              } else {
+                toast.error(res.message || 'Failed to delete folder');
+                return;
+              }
+            }
           } else {
-            toast.error(res.message || 'Failed to delete folder');
-            return;
+            await cmsApi.delete('/cc/content/', { data: { contentIds: [item.id] } });
+            toast.success('Deleted');
           }
-        }
-      } else {
-        await cmsApi.delete('/cc/content/', { data: { contentIds: [item.id] } });
-        toast.success('Deleted');
-      }
-      fetchContent(pagination.page);
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Unknown error';
-      console.error('Delete error:', err?.response?.data || err);
-      toast.error(`Failed to delete: ${errMsg}`);
-    } finally {
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
-    }
-  }
-
-  // ── Bulk delete ──
-  async function bulkDelete() {
-    if (!selectedIds.size) return;
-    if (!confirm(`Delete ${selectedIds.size} items?`)) return;
-    try {
-      const itemsToDelete = items.filter(i => selectedIds.has(i.id));
-      const folderIds = itemsToDelete.filter(i => i.contentType === 'FOLDER').map(i => i.id);
-      const contentIds = itemsToDelete.filter(i => i.contentType !== 'FOLDER').map(i => i.id);
-
-      let successCount = 0;
-      let errorMessages: string[] = [];
-
-      if (folderIds.length > 0) {
-        const { data } = await cmsApi.delete('/dc/folder', { data: { folderIds } });
-        if (Array.isArray(data)) {
-          data.forEach(res => {
-            if (res.deleted) successCount++;
-            else errorMessages.push(res.message || 'Failed to delete folder');
+          fetchContent(pagination.page);
+        } catch (err: any) {
+          const errMsg = err?.response?.data?.message || err?.message || 'Unknown error';
+          console.error('Delete error:', err?.response?.data || err);
+          toast.error(`Failed to delete: ${errMsg}`);
+        } finally {
+          setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.delete(item.id);
+            return next;
           });
         }
       }
-      if (contentIds.length > 0) {
-        await cmsApi.delete('/cc/content/', { data: { contentIds } });
-        successCount += contentIds.length;
+    });
+  }
+
+  // ── Bulk delete ──
+  function bulkDelete() {
+    if (!selectedIds.size) return;
+    setConfirmState({
+      title: 'Delete Selected Items',
+      message: `Are you sure you want to delete ${selectedIds.size} selected items?`,
+      confirmText: 'Delete',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          const itemsToDelete = items.filter(i => selectedIds.has(i.id));
+          const folderIds = itemsToDelete.filter(i => i.contentType === 'FOLDER').map(i => i.id);
+          const contentIds = itemsToDelete.filter(i => i.contentType !== 'FOLDER').map(i => i.id);
+
+          let successCount = 0;
+          let errorMessages: string[] = [];
+
+          if (folderIds.length > 0) {
+            const { data } = await cmsApi.delete('/dc/folder', { data: { folderIds } });
+            if (Array.isArray(data)) {
+              data.forEach(res => {
+                if (res.deleted) successCount++;
+                else errorMessages.push(res.message || 'Failed to delete folder');
+              });
+            }
+          }
+          if (contentIds.length > 0) {
+            await cmsApi.delete('/cc/content/', { data: { contentIds } });
+            successCount += contentIds.length;
+          }
+          
+          if (errorMessages.length > 0) {
+            toast.error(`Deleted ${successCount}. Errors: ${errorMessages[0]}`);
+          } else {
+            toast.success(`${successCount} items deleted`);
+          }
+          
+          fetchContent(pagination.page);
+        } catch {
+          toast.error('Bulk delete failed');
+        } finally {
+          setSelectedIds(new Set());
+        }
       }
-      
-      if (errorMessages.length > 0) {
-        toast.error(`Deleted ${successCount}. Errors: ${errorMessages[0]}`);
-      } else {
-        toast.success(`${successCount} items deleted`);
-      }
-      
-      fetchContent(pagination.page);
-    } catch {
-      toast.error('Bulk delete failed');
-    } finally {
-      setSelectedIds(new Set());
-    }
+    });
   }
 
   // ── Remove content from folder ──
-  async function removeItemFromFolder(item: ContentItem) {
+  function removeItemFromFolder(item: ContentItem) {
     if (!activeFolder) return;
-    if (!confirm(`Remove "${item.originalName || item.name}" from this folder?`)) return;
-    try {
-      await cmsApi.delete(`/fcc/folder/${activeFolder.id}/content`, { data: { contentIds: [item.id] } });
-      toast.success('Removed from folder');
-      fetchContent(pagination.page);
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || 'Unknown error';
-      console.error('Remove error:', err?.response?.data || err);
-      toast.error(`Failed to remove item from folder: ${errMsg}`);
-    } finally {
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
-    }
+    setConfirmState({
+      title: 'Remove from Folder',
+      message: `Are you sure you want to remove "${item.originalName || item.name}" from this folder?`,
+      confirmText: 'Remove',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          await cmsApi.delete(`/fcc/folder/${activeFolder.id}/content`, { data: { contentIds: [item.id] } });
+          toast.success('Removed from folder');
+          fetchContent(pagination.page);
+        } catch (err: any) {
+          const errMsg = err?.response?.data?.message || err?.message || 'Unknown error';
+          console.error('Remove error:', err?.response?.data || err);
+          toast.error(`Failed to remove item from folder: ${errMsg}`);
+        } finally {
+          setSelectedIds(prev => {
+            const next = new Set(prev);
+            next.delete(item.id);
+            return next;
+          });
+        }
+      }
+    });
   }
 
   // ── Bulk remove content from folder ──
-  async function bulkRemoveFromFolder() {
+  function bulkRemoveFromFolder() {
     if (!activeFolder || !selectedIds.size) return;
-    if (!confirm(`Remove ${selectedIds.size} items from this folder?`)) return;
-    try {
-      const contentIds = Array.from(selectedIds);
-      await cmsApi.delete(`/fcc/folder/${activeFolder.id}/content`, { data: { contentIds } });
-      toast.success(`${selectedIds.size} items removed from folder`);
-      fetchContent(pagination.page);
-    } catch {
-      toast.error('Failed to remove items from folder');
-    } finally {
-      setSelectedIds(new Set());
-    }
+    setConfirmState({
+      title: 'Remove Selected from Folder',
+      message: `Are you sure you want to remove ${selectedIds.size} items from this folder?`,
+      confirmText: 'Remove',
+      isDanger: true,
+      onConfirm: async () => {
+        try {
+          const contentIds = Array.from(selectedIds);
+          await cmsApi.delete(`/fcc/folder/${activeFolder.id}/content`, { data: { contentIds } });
+          toast.success(`${selectedIds.size} items removed from folder`);
+          fetchContent(pagination.page);
+        } catch {
+          toast.error('Failed to remove items from folder');
+        } finally {
+          setSelectedIds(new Set());
+        }
+      }
+    });
   }
 
   function toggleSelect(id: string) {
@@ -896,7 +984,7 @@ export default function ContentManagerPage() {
             return (
               <div
                 key={item.id}
-                className={`content-card${isSelected ? ' selected' : ''}`}
+                className={`content-card${isSelected ? ' selected' : ''}${item.contentType === 'FOLDER' ? ' folder-card' : ''}`}
                 onClick={() => setActiveMenu(null)}
                 id={`content-item-${item.id}`}
               >
@@ -908,7 +996,7 @@ export default function ContentManagerPage() {
                     <img src={item.thumbLink} alt={item.originalName} className="thumb-img" />
                   ) : (
                     <div className="thumb-placeholder" style={{ color: typeColor(item.contentType) }}>
-                      <ContentTypeIcon type={item.contentType} size={32} />
+                      <ContentTypeIcon type={item.contentType} size={item.contentType === 'FOLDER' ? 44 : 32} />
                     </div>
                   )}
                   {item.duration && (
@@ -996,7 +1084,7 @@ export default function ContentManagerPage() {
                         <div className="list-thumb">
                           {item.thumbLink
                             ? <img src={item.thumbLink} alt="" className="list-thumb-img" />
-                            : <div style={{ color: typeColor(item.contentType) }}>
+                            : <div className={item.contentType === 'FOLDER' ? 'folder-icon-list' : ''} style={{ color: typeColor(item.contentType) }}>
                                 <ContentTypeIcon type={item.contentType} size={18} />
                               </div>
                           }
@@ -1081,6 +1169,16 @@ export default function ContentManagerPage() {
       )}
       {showPlaylistsItem && (
         <ShowPlaylistsModal item={showPlaylistsItem} onClose={() => setShowPlaylistsItem(null)} />
+      )}
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          message={confirmState.message}
+          confirmText={confirmState.confirmText}
+          isDanger={confirmState.isDanger}
+          onClose={() => setConfirmState(null)}
+          onConfirm={confirmState.onConfirm}
+        />
       )}
 
       <style>{`
@@ -1179,6 +1277,14 @@ export default function ContentManagerPage() {
         }
         .btn-primary:hover { background: var(--btn-cta-hover); }
         .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+        .btn-danger-custom {
+          display: inline-flex; align-items: center; gap: .4rem;
+          background: #ef4444; color: white; border: none;
+          padding: .5rem 1rem; border-radius: 12px; font-size: .8rem; font-weight: 600;
+          cursor: pointer; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08); transition: all 0.2s ease; white-space: nowrap;
+        }
+        .btn-danger-custom:hover { background: #dc2626; }
+        .btn-danger-custom:disabled { opacity: .55; cursor: not-allowed; }
         .btn-secondary {
           display: inline-flex; align-items: center; gap: .4rem;
           background: var(--btn-secondary-bg); color: var(--btn-secondary-text);
@@ -1242,6 +1348,21 @@ export default function ContentManagerPage() {
         .content-grid {
           display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
           gap: 1rem;
+        }
+        .folder-card .thumb-placeholder {
+          color: #000000 !important;
+        }
+        html.dark .folder-card .thumb-placeholder {
+          color: #ffffff !important;
+        }
+        .folder-icon-list {
+          color: #000000 !important;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        html.dark .folder-icon-list {
+          color: #ffffff !important;
         }
 
         /* Card */
