@@ -8,10 +8,14 @@ import {
   Palette, Grid, HelpCircle, Plus, ChevronDown, MapPin, 
   FileVideo, FolderHeart, Calendar, Monitor, ChevronRight, 
   Lightbulb, ArrowUpRight, Link2, Sparkles, Loader2, AlertCircle, Building2,
-  ShoppingBag, CheckCircle2, Link2Off, Star, Coins, ExternalLink, RefreshCw
+  ShoppingBag, CheckCircle2, Link2Off, Star, Coins, ExternalLink, RefreshCw,
+  TrendingUp, Utensils, GraduationCap, CreditCard, Lock, Eye, ArrowRight, User, Search,
+  Zap, Check, ShieldCheck, X
 } from 'lucide-react';
 import { cmsApi, cmsApiV2, umsApi, setCookie } from '@/lib/api';
 import { toast } from 'sonner';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 interface CanvaDesign {
   id: string;
@@ -24,6 +28,12 @@ interface TemplateImage {
   id?: number;
   url?: string;
   imageSource?: string;
+}
+
+interface CanvaCategoryDto {
+  id: number;
+  name: string;
+  orderNo?: number;
 }
 
 interface DsTemplate {
@@ -43,15 +53,14 @@ interface DsTemplate {
   width?: number;
   height?: number;
   images?: TemplateImage[];
+  categories?: CanvaCategoryDto[];
 }
 
-/** Picks the best thumbnail URL from a template — images[] is the real source */
 const getThumb = (tpl: DsTemplate): string | null => {
   if (tpl.images && tpl.images.length > 0) {
     const url = tpl.images[0].url;
     if (url) return url;
   }
-  // fallbacks for older data
   return tpl.viewUrl || tpl.designUrl || tpl.templateUrl || null;
 };
 
@@ -64,7 +73,194 @@ interface Purchase {
   templateType?: string;
 }
 
-type HubTab = 'gallery' | 'purchased' | 'canva';
+interface CreditPack {
+  id: string;
+  name: string;
+  credits: number;
+  amount: number;
+  currency: string;
+  badge?: string;
+}
+
+type CategoryTab = 'Trending' | 'Restaurant' | 'Cafe' | 'Retail' | 'School' | 'Seasonal';
+
+// ─── Stripe helpers ────────────────────────────────────────────────────────────
+const CREDIT_PACKS: CreditPack[] = [
+  { id: 'credits_10',  name: 'Starter Pack', credits: 10,  amount: 999,  currency: 'USD' },
+  { id: 'credits_50',  name: 'Value Pack',   credits: 50,  amount: 3999, currency: 'USD', badge: 'Popular' },
+  { id: 'credits_150', name: 'Pro Pack',     credits: 150, amount: 9999, currency: 'USD', badge: 'Best Value' },
+];
+
+function getStripePromise(locale: string) {
+  return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '', { locale: locale as any });
+}
+
+// ─── Stripe card form (reused from billing page) ──────────────────────────────
+function DashCardPaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
+  clientSecret: string; amount: number; onSuccess: () => void; onCancel: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [cardErrors, setCardErrors] = useState({ number: '', expiry: '', cvc: '' });
+
+  const elStyle = {
+    style: {
+      base: { color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif', fontSize: '15px', '::placeholder': { color: '#64748b' } },
+      invalid: { color: '#ef4444' },
+    },
+  };
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setProcessing(true);
+    const cardNumber = elements.getElement(CardNumberElement);
+    if (!cardNumber) { setProcessing(false); return; }
+    try {
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, { payment_method: { card: cardNumber } });
+      if (error) {
+        toast.error(error.message || 'Payment failed');
+      } else if (paymentIntent?.status === 'succeeded') {
+        toast.success('Payment successful! Credits activated.');
+        onSuccess();
+      } else if (paymentIntent?.status === 'requires_action') {
+        toast.info('Additional verification required…');
+      }
+    } catch { toast.error('Payment error. Please try again.'); }
+    finally { setProcessing(false); }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="dbc-card-form">
+      <div className="dbc-field">
+        <label className="dbc-label">Card Number</label>
+        <div className="dbc-stripe-el"><CardNumberElement options={elStyle} onChange={e => setCardErrors(p => ({ ...p, number: e.error?.message || '' }))} /></div>
+        {cardErrors.number && <p className="dbc-field-err">{cardErrors.number}</p>}
+      </div>
+      <div className="dbc-row-2">
+        <div className="dbc-field">
+          <label className="dbc-label">Expiry</label>
+          <div className="dbc-stripe-el"><CardExpiryElement options={elStyle} onChange={e => setCardErrors(p => ({ ...p, expiry: e.error?.message || '' }))} /></div>
+          {cardErrors.expiry && <p className="dbc-field-err">{cardErrors.expiry}</p>}
+        </div>
+        <div className="dbc-field">
+          <label className="dbc-label">CVC</label>
+          <div className="dbc-stripe-el"><CardCvcElement options={elStyle} onChange={e => setCardErrors(p => ({ ...p, cvc: e.error?.message || '' }))} /></div>
+          {cardErrors.cvc && <p className="dbc-field-err">{cardErrors.cvc}</p>}
+        </div>
+      </div>
+      <div className="dbc-form-footer">
+        <div className="dbc-secure"><ShieldCheck size={13} /> Secured by Stripe</div>
+        <div className="dbc-form-actions">
+          <button type="button" className="dbc-btn-ghost" onClick={onCancel}>Cancel</button>
+          <button type="submit" className="dbc-btn-primary" disabled={processing}>
+            {processing ? <RefreshCw size={13} className="db-spin" /> : <CreditCard size={13} />}
+            Pay ${(amount / 100).toFixed(2)}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+// ─── Credit Buy Modal (pack selector + payment form) ─────────────────────────
+function CreditBuyModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<{ clientSecret: string; amount: number } | null>(null);
+  const [stripeInst, setStripeInst] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const locale = typeof window !== 'undefined' ? (localStorage.getItem('lang') || 'en') : 'en';
+    setStripeInst(getStripePromise(locale));
+  }, []);
+
+  async function handleBuy(pack: CreditPack) {
+    setSelectedPack(pack);
+    setLoading(true);
+    try {
+      const { data } = await cmsApi.post('/sac/subscriptions/pay', {
+        packId: pack.id, amount: pack.amount, currency: pack.currency.toLowerCase(),
+      });
+      setPaymentInfo({ clientSecret: data.clientSecret, amount: pack.amount });
+    } catch {
+      toast.error('Failed to initiate payment');
+      setSelectedPack(null);
+    } finally { setLoading(false); }
+  }
+
+  function handleSuccess() {
+    setPaymentInfo(null);
+    setSelectedPack(null);
+    onSuccess();
+    onClose();
+  }
+
+  return (
+    <div className="dbc-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="dbc-modal">
+        {/* Header */}
+        <div className="dbc-modal-hd">
+          <div className="dbc-modal-hd-left">
+            <div className="dbc-modal-icon"><Coins size={18} /></div>
+            <div>
+              <h3 className="dbc-modal-title">Buy Template Credits</h3>
+              <p className="dbc-modal-sub">One-time purchase · No subscription needed</p>
+            </div>
+          </div>
+          <button className="dbc-close-btn" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        {/* Body */}
+        <div className="dbc-modal-body">
+          {paymentInfo && stripeInst ? (
+            <>
+              <div className="dbc-pack-summary">
+                <Zap size={16} />
+                <span><strong>{selectedPack?.credits} Credits</strong> — ${((selectedPack?.amount || 0) / 100).toFixed(2)} {selectedPack?.currency}</span>
+              </div>
+              <Elements stripe={stripeInst} options={{ clientSecret: paymentInfo.clientSecret }}>
+                <DashCardPaymentForm
+                  clientSecret={paymentInfo.clientSecret}
+                  amount={paymentInfo.amount}
+                  onSuccess={handleSuccess}
+                  onCancel={() => { setPaymentInfo(null); setSelectedPack(null); }}
+                />
+              </Elements>
+            </>
+          ) : (
+            <>
+              <p className="dbc-pack-prompt">Select a credit pack to get started:</p>
+              <div className="dbc-packs-grid">
+                {CREDIT_PACKS.map(pack => (
+                  <button
+                    key={pack.id}
+                    className={`dbc-pack-card ${selectedPack?.id === pack.id && loading ? 'dbc-pack-loading' : ''}`}
+                    onClick={() => handleBuy(pack)}
+                    disabled={loading}
+                    id={`dash-buy-${pack.id}`}
+                  >
+                    {pack.badge && <div className="dbc-pack-badge">{pack.badge}</div>}
+                    <div className="dbc-pack-icon"><Zap size={20} /></div>
+                    <div className="dbc-pack-name">{pack.name}</div>
+                    <div className="dbc-pack-credits">{pack.credits} Credits</div>
+                    <div className="dbc-pack-price">${(pack.amount / 100).toFixed(2)} <span className="dbc-pack-cur">{pack.currency}</span></div>
+                    {selectedPack?.id === pack.id && loading
+                      ? <div className="dbc-pack-spinner"><RefreshCw size={14} className="db-spin" /> Processing…</div>
+                      : <div className="dbc-pack-cta">Buy Now</div>
+                    }
+                  </button>
+                ))}
+              </div>
+              <p className="dbc-pack-note"><ShieldCheck size={12} /> Payments secured by Stripe · Credits never expire</p>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardMainPage() {
   const { t } = useTranslation();
@@ -81,38 +277,46 @@ export default function DashboardMainPage() {
   const [stats, setStats] = useState({ screensOnline: 0, scheduledToday: 0, playlists: 0, files: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
 
-  // ── Template Hub State ───────────────────────────────────────────────────────
-  const [hubTab, setHubTab] = useState<HubTab>('gallery');
+  // State
+  const [categoryTab, setCategoryTab] = useState<CategoryTab>('Trending');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Gallery tab
+  // Templates
   const [gallery, setGallery] = useState<DsTemplate[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
 
-  // Purchased tab
+  // Purchased Templates
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchasedTemplates, setPurchasedTemplates] = useState<Map<number, DsTemplate>>(new Map());
   const [purchasesLoading, setPurchasesLoading] = useState(true);
 
-  // Credit balance
+  // Credit balance & Buying State
   const [credits, setCredits] = useState<{ total: number; used: number } | null>(null);
   const [buyingId, setBuyingId] = useState<number | null>(null);
+  const [showCreditModal, setShowCreditModal] = useState(false);
   const [purchasedIds, setPurchasedIds] = useState<Set<number>>(new Set());
 
-  // Canva tab
+  // Subscription info
+  const [subPlan, setSubPlan] = useState<any>(null);
+  const [subLoading, setSubLoading] = useState(true);
+
+  // Canva tab State (for background connectivity checks)
   const [canvaConnected, setCanvaConnected] = useState(false);
   const [canvaDesigns, setCanvaDesigns] = useState<CanvaDesign[]>([]);
-  const [canvaLoading, setCanvaLoading] = useState(true);
-  const [canvaConnecting, setCanvaConnecting] = useState(false);
+
+  // Preview Modal State
+  const [previewTemplate, setPreviewTemplate] = useState<DsTemplate | null>(null);
 
   const locations = currentUser?.organization?.locations || [];
 
-  // ── Load Everything On Mount ─────────────────────────────────────────────────
+  // Load everything on mount
   useEffect(() => {
     loadStats();
     loadGallery();
     loadPurchases();
     loadCredits();
     checkCanvaStatus();
+    loadSubscription();
   }, []);
 
   const loadStats = async () => {
@@ -148,7 +352,7 @@ export default function DashboardMainPage() {
   const loadGallery = async () => {
     setGalleryLoading(true);
     try {
-      const res = await cmsApi.get('/ctc/templates', { params: { page: 0, size: 8 } });
+      const res = await cmsApi.get('/ctc/templates', { params: { page: 0, size: 100 } });
       const items: DsTemplate[] = res.data?.content || res.data || [];
       setGallery(items);
     } catch {
@@ -161,13 +365,12 @@ export default function DashboardMainPage() {
   const loadPurchases = async () => {
     setPurchasesLoading(true);
     try {
-      const res = await cmsApi.get('/ctpc/purchases', { params: { page: 0, size: 20 } });
+      const res = await cmsApi.get('/ctpc/purchases', { params: { page: 0, size: 100 } });
       const items: Purchase[] = res.data?.content || res.data || [];
       setPurchases(items);
-      // Track which template IDs are already purchased
       const ids = new Set(items.map((p) => p.dsCanvaTemplateId));
       setPurchasedIds(ids);
-      // Fetch full template details for purchased items
+
       if (ids.size > 0) {
         try {
           const galleryRes = await cmsApi.get('/ctc/templates', { params: { page: 0, size: 100 } });
@@ -195,38 +398,30 @@ export default function DashboardMainPage() {
     }
   };
 
+  const loadSubscription = async () => {
+    setSubLoading(true);
+    try {
+      const { data } = await cmsApi.get('/sac/my/subscriptions');
+      setSubPlan(Array.isArray(data) ? data[0] : data);
+    } catch {
+      setSubPlan(null);
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
   const checkCanvaStatus = async () => {
-    setCanvaLoading(true);
     try {
       const profileRes = await cmsApi.get('/canva/profile');
       if (profileRes.status === 200 && profileRes.data) {
         setCanvaConnected(true);
-        const designsRes = await cmsApi.get('/canva/designs', { params: { size: 6 } });
+        const designsRes = await cmsApi.get('/canva/designs', { params: { size: 12 } });
         setCanvaDesigns(designsRes.data?.designs || designsRes.data?.items || designsRes.data?.content || []);
       } else {
         setCanvaConnected(false);
       }
     } catch {
       setCanvaConnected(false);
-    } finally {
-      setCanvaLoading(false);
-    }
-  };
-
-  const connectCanva = async () => {
-    setCanvaConnecting(true);
-    try {
-      const { data } = await cmsApi.get('/canva/connect');
-      const redirectUrl = data?.redirectUrl || data?.url;
-      if (redirectUrl) {
-        window.location.href = redirectUrl;
-      } else {
-        toast.error('Failed to connect to Canva');
-      }
-    } catch {
-      toast.error('Failed to connect to Canva');
-    } finally {
-      setCanvaConnecting(false);
     }
   };
 
@@ -246,7 +441,7 @@ export default function DashboardMainPage() {
         creditCost: template.creditCost ?? 0,
         templateType: 'DIGITAL',
       });
-      toast.success(`"${template.title}" added to your library!`);
+      toast.success(`"${template.title}" unlocked successfully!`);
       setPurchasedIds((prev) => new Set([...prev, template.id]));
       setPurchasedTemplates((prev) => new Map([...prev, [template.id, template]]));
       setPurchases((prev) => [...prev, {
@@ -254,6 +449,10 @@ export default function DashboardMainPage() {
         creditCost: template.creditCost, purchaseDate: new Date().toISOString(),
       }]);
       if (credits) setCredits({ ...credits, used: credits.used + cost });
+      
+      if (previewTemplate?.id === template.id) {
+        setPreviewTemplate({ ...template });
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Failed to purchase template';
       toast.error(msg);
@@ -284,626 +483,1834 @@ export default function DashboardMainPage() {
   };
 
   const remainingCredits = credits ? credits.total - credits.used : 0;
+  const orgName = currentUser?.organization?.name || 'My Organization';
+
+  // Dynamic template classification & search logic
+  const getFilteredTemplates = (catName: CategoryTab): DsTemplate[] => {
+    if (!gallery || gallery.length === 0) return [];
+    
+    let filtered = [...gallery];
+
+    // Filter by Category Pill
+    if (catName !== 'Trending') {
+      const searchTerms: Record<string, string[]> = {
+        'Restaurant': ['restaurant', 'food', 'menu', 'dining', 'burger', 'pizza', 'kitchen', 'recipe', 'cook'],
+        'Cafe': ['cafe', 'coffee', 'bakery', 'tea', 'drink', 'beverage', 'cup', 'morning'],
+        'Retail': ['retail', 'sale', 'shop', 'store', 'fashion', 'discount', 'clothing', 'shoes', 'boutique', 'market', 'product', 'buy'],
+        'School': ['school', 'education', 'class', 'student', 'teacher', 'university', 'college', 'learn', 'board', 'academic', 'lesson'],
+        'Seasonal': ['seasonal', 'winter', 'summer', 'spring', 'autumn', 'christmas', 'holiday', 'halloween', 'easter', 'festive', 'october', 'july', 'party']
+      };
+
+      const terms = searchTerms[catName] || [];
+      filtered = gallery.filter(t => {
+        if (t.categories && t.categories.length > 0) {
+          if (t.categories.some(c => c.name?.toLowerCase().includes(catName.toLowerCase()))) {
+            return true;
+          }
+        }
+        const text = `${t.title || ''} ${t.description || ''} ${t.tags || ''}`.toLowerCase();
+        return terms.some(term => text.includes(term));
+      });
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(t => 
+        (t.title || '').toLowerCase().includes(q) || 
+        (t.description || '').toLowerCase().includes(q) ||
+        (t.tags || '').toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
+  };
+
+  // Get recommended templates (unpurchased) for the bottom row
+  const getRecommendedTemplates = (): DsTemplate[] => {
+    if (!gallery || gallery.length === 0) return [];
+    return gallery.filter(t => !purchasedIds.has(t.id)).slice(0, 8);
+  };
+
+  const activeTemplates = getFilteredTemplates(categoryTab);
+  const recommendedTemplates = getRecommendedTemplates();
+
+  const handleUseTemplate = (tpl: DsTemplate) => {
+    const link = tpl.canvaSmartEmbedLink || tpl.canvaPublicLink || '#';
+    if (link !== '#') {
+      window.open(link, '_blank', 'noopener,noreferrer');
+    } else {
+      toast.error('Canva Link not available for this template');
+    }
+  };
 
   return (
     <div className="db-page">
       
-      {/* ── 1. WELCOME BANNER ── */}
-      <div className="db-welcome-card">
-        <div className="db-welcome-left">
-          <h1 className="db-welcome-title">
-            {t('DASHBOARD.welcome', { name: currentUser?.firstName || 'Arun' })}
-          </h1>
+      {/* ─── MAIN DESKTOP GRID ─── */}
+      <div className="db-main-container">
+        
+        {/* ─── LEFT PANEL: TEMPLATE HUB ─── */}
+        <div className="db-content-left">
           
-          <div className="db-location-context">
-            <span className="db-location-label">{t('DASHBOARD.current_location_context')}</span>
-            {!currentUser ? (
-              <span className="db-location-loading">{t('DASHBOARD.loading')}</span>
-            ) : (
-              <div className="db-location-actions">
-                {locations.length === 0 ? (
-                  <button onClick={() => router.push('/admin/locations/0')} className="db-location-add-btn">
-                    + {t('DASHBOARD.add_location')}
+          {/* 1. COMPACT HERO SECTION */}
+          <div className="db-compact-hero">
+            <div className="db-hero-glass-shine" />
+            <div className="db-hero-inner">
+              <div className="db-hero-left">
+                <span className="db-hero-badge">Canva Marketplace</span>
+                <p className="db-hero-pitch">
+                  Browse premium digital signage Canva templates for restaurant menus, cafe boards, retail promotions, schools, and seasonal campaigns.
+                </p>
+                <div className="db-hero-ctas">
+                  <button onClick={() => router.push('/admin/templates')} className="db-cta-primary">
+                    <Sparkles size={14} />
+                    <span>Browse Templates</span>
                   </button>
-                ) : (
-                  <>
-                    <button
-                      disabled={switching}
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="db-location-trigger-btn"
-                    >
-                      {currentLocation?.name || t('DASHBOARD.select_location')}
-                      <ChevronDown size={13} className={`db-chevron ${isDropdownOpen ? 'open' : ''}`} />
-                    </button>
-                    <button onClick={() => router.push('/admin/locations/0')} className="db-location-add-btn" style={{ marginLeft: '0.4rem' }}>
-                      + {t('DASHBOARD.add_location')}
-                    </button>
-                  </>
-                )}
+                  <button onClick={() => router.push('/admin/playlists')} className="db-cta-secondary">
+                    <FolderHeart size={14} />
+                    <span>Create Playlist</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="db-hero-right">
+                <div className="db-credits-hero-card">
+                  <Coins className="db-credits-hero-icon" />
+                  <div className="db-credits-hero-details">
+                    <span className="db-credits-hero-lbl">Available Credits</span>
+                    <span className="db-credits-hero-val">{remainingCredits} Credits</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. TEMPLATE DISCOVERY SECTION */}
+          <div className="db-discovery-panel">
+            <div className="db-discovery-header">
+              <div>
+                <h2 className="db-discovery-title">Discover Templates</h2>
+                <p className="db-discovery-sub">Select a category or search our premium design layout collections</p>
+              </div>
+
+              {/* Search Bar */}
+              <div className="db-search-bar-wrapper">
+                <Search size={14} className="db-search-icon" />
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search templates..." 
+                  className="db-search-input-premium"
+                />
+              </div>
+            </div>
+
+            {/* Category pills nav */}
+            <div className="db-category-pills">
+              {([
+                'Trending',
+                'Restaurant',
+                'Cafe',
+                'Retail',
+                'School',
+                'Seasonal'
+              ] as CategoryTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setCategoryTab(tab)}
+                  className={`db-pill-btn ${categoryTab === tab ? 'active' : ''}`}
+                >
+                  <span>{tab}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Large Template Grid */}
+            {galleryLoading ? (
+              <div className="db-grid-loading">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="db-skeleton-large-card" />
+                ))}
+              </div>
+            ) : activeTemplates.length === 0 ? (
+              <div className="db-no-results-card">
+                <AlertCircle size={22} className="db-muted-icon" />
+                <p className="db-no-results-text">No templates match the active criteria.</p>
+              </div>
+            ) : (
+              <div className="db-large-templates-grid">
+                {activeTemplates.map((tpl) => {
+                  const owned = purchasedIds.has(tpl.id);
+                  const cost = tpl.creditCost ?? 0;
+                  
+                  // Compute orientation parameters
+                  const isVertical = tpl.width && tpl.height ? tpl.height > tpl.width : false;
+                  const isSquare = tpl.width && tpl.height ? tpl.height === tpl.width : false;
+                  const orientationLabel = isVertical ? 'Portrait' : (isSquare ? 'Square' : 'Landscape');
+
+                  return (
+                    <div key={tpl.id} className="db-large-template-card" onClick={() => setPreviewTemplate(tpl)}>
+                      {/* Light-gray fixed ratio preview block */}
+                      <div className="db-card-preview-container">
+                        {getThumb(tpl) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={getThumb(tpl)!} alt={tpl.title} className="db-card-preview-image" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                        ) : (
+                          <div className="db-card-preview-placeholder"><Palette size={32} opacity={0.15} /></div>
+                        )}
+                        
+                        {/* Status Pills */}
+                        <div className="db-card-top-left-badges">
+                          <span className="db-badge-orientation">{orientationLabel}</span>
+                          <span className="db-badge-size">{tpl.width || 1920}x{tpl.height || 1080}</span>
+                        </div>
+                        
+                        <div className="db-card-top-right-badges">
+                          <span className={`db-badge-credits ${owned ? 'owned' : (cost === 0 ? 'free' : 'cost')}`}>
+                            {owned ? 'Owned' : (cost === 0 ? 'Free' : `${cost} cr`)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Bottom Details */}
+                      <div className="db-card-details-row">
+                        <div className="db-card-info-texts">
+                          <h4 className="db-card-title-text">{tpl.title || 'Untitled Design'}</h4>
+                        </div>
+                        <div className="db-card-actions-wrapper" onClick={(e) => e.stopPropagation()}>
+                          <button className="db-btn-card-preview" onClick={() => setPreviewTemplate(tpl)}>
+                            <Eye size={12} />
+                            <span>Preview</span>
+                          </button>
+                          {owned ? (
+                            <button className="db-btn-card-action use" onClick={() => handleUseTemplate(tpl)}>
+                              <ExternalLink size={12} />
+                              <span>Use</span>
+                            </button>
+                          ) : (
+                            <button className="db-btn-card-action buy" onClick={() => buyTemplate(tpl)} disabled={buyingId !== null}>
+                              {buyingId === tpl.id ? <Loader2 size={12} className="db-spin" /> : <ShoppingBag size={12} />}
+                              <span>Buy</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 3. RECOMMENDED TEMPLATES (Horizontal sliding catalog) */}
+          <div className="db-discovery-panel">
+            <h3 className="db-discovery-title-small">Recommended for You</h3>
+            
+            {galleryLoading ? (
+              <div className="db-slider-loading-grid">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="db-skeleton-card" />
+                ))}
+              </div>
+            ) : recommendedTemplates.length === 0 ? (
+              <p className="db-empty-discovery">All templates unlocked! Good job.</p>
+            ) : (
+              <div className="db-horizontal-recommended-row">
+                {recommendedTemplates.map((tpl) => {
+                  const cost = tpl.creditCost ?? 0;
+                  const isVertical = tpl.width && tpl.height ? tpl.height > tpl.width : false;
+                  const isSquare = tpl.width && tpl.height ? tpl.height === tpl.width : false;
+                  const orientationLabel = isVertical ? 'Portrait' : (isSquare ? 'Square' : 'Landscape');
+
+                  return (
+                    <div key={tpl.id} className="db-recommended-card-item" onClick={() => setPreviewTemplate(tpl)}>
+                      <div className="db-recommended-thumb-area">
+                        {getThumb(tpl) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={getThumb(tpl)!} alt={tpl.title} className="db-recommended-img" />
+                        ) : (
+                          <div className="db-slider-placeholder"><Sparkles size={20} opacity={0.2} /></div>
+                        )}
+                        <span className="db-recommended-orient-lbl">{orientationLabel}</span>
+                        <span className="db-recommended-cost-lbl">{cost === 0 ? 'Free' : `${cost} cr`}</span>
+                      </div>
+                      <div className="db-recommended-info">
+                        <p className="db-recommended-title">{tpl.title}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 4. SIGNAGE OPERATIONS (Demoted, placed at the bottom) */}
+          <div className="db-operations-panel">
+            <h3 className="db-operations-title">Signage Operations</h3>
+            <div className="db-operations-grid">
+              
+              <div className="db-ops-card" onClick={() => router.push('/admin/content')}>
+                <div className="db-ops-icon purple"><FileVideo size={16} /></div>
+                <div className="db-ops-texts">
+                  <span className="db-ops-name">Upload Content</span>
+                  <span className="db-ops-desc">Upload files & media</span>
+                </div>
+                <ChevronRight size={14} className="db-ops-arrow" />
+              </div>
+
+              <div className="db-ops-card" onClick={() => router.push('/admin/playlists')}>
+                <div className="db-ops-icon pink"><FolderHeart size={16} /></div>
+                <div className="db-ops-texts">
+                  <span className="db-ops-name">Create Playlist</span>
+                  <span className="db-ops-desc">Design loops & order</span>
+                </div>
+                <ChevronRight size={14} className="db-ops-arrow" />
+              </div>
+
+              <div className="db-ops-card" onClick={() => router.push('/admin/schedules')}>
+                <div className="db-ops-icon indigo"><Calendar size={16} /></div>
+                <div className="db-ops-texts">
+                  <span className="db-ops-name">Schedule Content</span>
+                  <span className="db-ops-desc">Configure display hours</span>
+                </div>
+                <ChevronRight size={14} className="db-ops-arrow" />
+              </div>
+
+              <div className="db-ops-card" onClick={() => router.push('/admin/screens')}>
+                <div className="db-ops-icon green"><Monitor size={16} /></div>
+                <div className="db-ops-texts">
+                  <span className="db-ops-name">Manage Screens</span>
+                  <span className="db-ops-desc">Monitor hardware states</span>
+                </div>
+                <ChevronRight size={14} className="db-ops-arrow" />
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* ─── RIGHT PANEL: CREDITS & STATS ONLY ─── */}
+        <div className="db-content-right-sidebar">
+
+          {/* CREDITS WIDGET */}
+          <div className="db-sidebar-widget">
+            <h4 className="db-widget-title">Template Credits</h4>
+            <div className="db-sidebar-credits-box">
+              <div className="db-circular-display">
+                <span className="db-circular-number">{remainingCredits}</span>
+                <span className="db-circular-lbl">Remaining</span>
+              </div>
+              
+              <div className="db-credits-progress-horizontal-bg">
+                <div className="db-credits-progress-horizontal-fill" style={{ width: `${Math.min(100, ((credits?.used ?? 0) / (credits?.total || 1)) * 100)}%` }} />
+              </div>
+              
+              <div className="db-credits-metrics-row">
+                <span>Used: <strong>{credits?.used ?? 0}</strong></span>
+                <span>Total: <strong>{credits?.total || 0}</strong></span>
+              </div>
+
+              <button onClick={() => setShowCreditModal(true)} className="db-widget-buy-btn" id="dash-buy-credits-btn">
+                <Coins size={12} />
+                <span>Buy Credits</span>
+              </button>
+            </div>
+          </div>
+
+          {/* QUICK STATS */}
+          <div className="db-sidebar-widget">
+            <h4 className="db-widget-title">Quick Stats</h4>
+            <div className="db-widget-stats-rows">
+              
+              <div className="db-widget-stat-row" onClick={() => router.push('/admin/screens')}>
+                <div className="db-widget-stat-icon green"><Monitor size={12} /></div>
+                <span className="db-widget-stat-label">Screens Online</span>
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val green-text">{stats.screensOnline} online</span>}
+              </div>
+
+              <div className="db-widget-stat-row" onClick={() => router.push('/admin/schedules')}>
+                <div className="db-widget-stat-icon purple"><Calendar size={12} /></div>
+                <span className="db-widget-stat-label">Active Schedules</span>
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val purple-text">{stats.scheduledToday} active</span>}
+              </div>
+
+              <div className="db-widget-stat-row" onClick={() => router.push('/admin/playlists')}>
+                <div className="db-widget-stat-icon orange"><FolderHeart size={12} /></div>
+                <span className="db-widget-stat-label">Playlists</span>
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val">{stats.playlists} files</span>}
+              </div>
+
+            </div>
+          </div>
+
+          {/* COMPACT ORG INFO & LOCATION SELECTOR */}
+          <div className="db-sidebar-widget">
+            <h4 className="db-widget-title">Organization Settings</h4>
+            <div className="db-widget-org-body">
+              <div className="db-widget-org-desc">
+                <Building2 size={13} className="db-widget-icon-dim" />
+                <span className="db-widget-org-name-text">{orgName}</span>
+              </div>
+              
+              {/* Dropdown switch active context */}
+              <div className="db-widget-loc-picker-container">
+                <button
+                  disabled={switching}
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="db-widget-loc-trigger"
+                >
+                  <MapPin size={12} />
+                  <span className="db-widget-loc-name-txt">{currentLocation?.name || 'Switch Location'}</span>
+                  <ChevronDown size={12} className={`db-widget-loc-chevron ${isDropdownOpen ? 'open' : ''}`} />
+                </button>
+
                 {isDropdownOpen && (
                   <>
-                    <div className="db-dropdown-overlay" onClick={() => setIsDropdownOpen(false)} />
-                    <div className="db-location-dropdown">
-                      <p className="db-dropdown-header">{t('DASHBOARD.select_location_prompt')}</p>
-                      <div className="db-dropdown-list">
+                    <div className="db-widget-loc-overlay" onClick={() => setIsDropdownOpen(false)} />
+                    <div className="db-widget-loc-popover">
+                      <p className="db-popover-title">Locations ({locations.length})</p>
+                      <div className="db-popover-scrollable">
                         {locations.map((loc: any) => (
                           <button
                             key={loc.id}
                             onClick={() => handleLocationChange(loc)}
-                            className={`db-dropdown-item ${currentLocation?.id === loc.id ? 'active' : ''}`}
+                            className={`db-popover-item ${currentLocation?.id === loc.id ? 'active' : ''}`}
                           >
-                            <MapPin size={12} className="db-dropdown-icon" />
-                            <span className="db-dropdown-text">{loc.name || 'Unnamed Location'}</span>
+                            <MapPin size={12} />
+                            <span>{loc.name || 'Unnamed'}</span>
                           </button>
                         ))}
                       </div>
-                      <div className="db-dropdown-footer">
-                        <button onClick={() => { setIsDropdownOpen(false); router.push('/admin/locations/0'); }} className="db-add-loc-btn">
-                          <Plus size={12} /><span>{t('DASHBOARD.add_location')}</span>
+                      <div className="db-popover-footer">
+                        <button onClick={() => { setIsDropdownOpen(false); router.push('/admin/locations/0'); }} className="db-popover-add-btn">
+                          <Plus size={12} />
+                          <span>Add Location</span>
                         </button>
                       </div>
                     </div>
                   </>
                 )}
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="db-welcome-right" aria-hidden="true">
-          <svg className="db-welcome-svg" width="320" height="160" viewBox="0 0 320 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="dotGrid" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                <circle cx="1.5" cy="1.5" r="1.5" fill="currentColor" opacity="0.18" />
-              </pattern>
-              <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.7" />
-                <stop offset="100%" stopColor="#a855f7" stopOpacity="0.3" />
-              </linearGradient>
-              <linearGradient id="lineGrad2" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0%" stopColor="#a855f7" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.15" />
-              </linearGradient>
-              <radialGradient id="glow1" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.35" />
-                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-              </radialGradient>
-              <radialGradient id="glow2" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#a855f7" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
-              </radialGradient>
-            </defs>
-            <rect width="320" height="160" fill="url(#dotGrid)" className="db-svg-dots" />
-            <line x1="60" y1="-10" x2="-10" y2="80" stroke="url(#lineGrad)" strokeWidth="1.5" />
-            <line x1="120" y1="-10" x2="20" y2="120" stroke="url(#lineGrad)" strokeWidth="1" />
-            <line x1="200" y1="-10" x2="60" y2="170" stroke="url(#lineGrad)" strokeWidth="0.8" />
-            <line x1="280" y1="-10" x2="160" y2="170" stroke="url(#lineGrad2)" strokeWidth="1.5" />
-            <line x1="340" y1="10" x2="220" y2="170" stroke="url(#lineGrad2)" strokeWidth="1" />
-            <line x1="340" y1="60" x2="260" y2="170" stroke="url(#lineGrad2)" strokeWidth="0.7" />
-            <line x1="100" y1="40" x2="320" y2="40" stroke="var(--accent)" strokeWidth="0.6" opacity="0.2" />
-            <line x1="80" y1="90" x2="320" y2="90" stroke="#a855f7" strokeWidth="0.6" opacity="0.2" />
-            <line x1="120" y1="130" x2="320" y2="130" stroke="var(--accent)" strokeWidth="0.6" opacity="0.15" />
-            <ellipse cx="240" cy="55" rx="55" ry="55" fill="url(#glow1)" />
-            <ellipse cx="290" cy="115" rx="40" ry="40" fill="url(#glow2)" />
-            <circle cx="240" cy="55" r="30" stroke="var(--accent)" strokeWidth="1" fill="none" opacity="0.4" />
-            <circle cx="240" cy="55" r="48" stroke="var(--accent)" strokeWidth="0.6" fill="none" opacity="0.2" strokeDasharray="4 6" />
-            <circle cx="290" cy="115" r="22" stroke="#a855f7" strokeWidth="1" fill="none" opacity="0.35" />
-            <circle cx="290" cy="115" r="36" stroke="#a855f7" strokeWidth="0.5" fill="none" opacity="0.15" strokeDasharray="3 5" />
-            <circle cx="180" cy="30" r="4" fill="var(--accent)" opacity="0.5" />
-            <circle cx="160" cy="120" r="3" fill="#a855f7" opacity="0.45" />
-            <circle cx="310" cy="45" r="3" fill="var(--accent)" opacity="0.4" />
-            <circle cx="130" cy="70" r="2.5" fill="#a855f7" opacity="0.35" />
-          </svg>
-        </div>
-      </div>
-
-      {/* ── 2. QUICK ACTION GRID ── */}
-      <div className="db-action-grid">
-        <div className="db-action-card" onClick={() => router.push('/admin/content')}>
-          <div className="db-action-icon-wrapper purple"><FileVideo size={20} /></div>
-          <div className="db-action-text-wrapper">
-            <h3 className="db-action-card-title">{t('DASHBOARD.upload_manage')}</h3>
-            <p className="db-action-card-desc">{t('DASHBOARD.upload_manage_desc')}</p>
-          </div>
-          <div className="db-action-arrow"><ChevronRight size={14} /></div>
-        </div>
-        <div className="db-action-card" onClick={() => router.push('/admin/playlists')}>
-          <div className="db-action-icon-wrapper pink"><FolderHeart size={20} /></div>
-          <div className="db-action-text-wrapper">
-            <h3 className="db-action-card-title">{t('DASHBOARD.create_playlist')}</h3>
-            <p className="db-action-card-desc">{t('DASHBOARD.create_playlist_desc')}</p>
-          </div>
-          <div className="db-action-arrow"><ChevronRight size={14} /></div>
-        </div>
-        <div className="db-action-card" onClick={() => router.push('/admin/schedules')}>
-          <div className="db-action-icon-wrapper deep-purple"><Calendar size={20} /></div>
-          <div className="db-action-text-wrapper">
-            <h3 className="db-action-card-title">{t('DASHBOARD.schedule_content')}</h3>
-            <p className="db-action-card-desc">{t('DASHBOARD.schedule_content_desc')}</p>
-          </div>
-          <div className="db-action-arrow"><ChevronRight size={14} /></div>
-        </div>
-        <div className="db-action-card" onClick={() => router.push('/admin/screens')}>
-          <div className="db-action-icon-wrapper green"><Monitor size={20} /></div>
-          <div className="db-action-text-wrapper">
-            <h3 className="db-action-card-title">{t('DASHBOARD.manage_screens')}</h3>
-            <p className="db-action-card-desc">{t('DASHBOARD.manage_screens_desc')}</p>
-          </div>
-          <div className="db-action-arrow"><ChevronRight size={14} /></div>
-        </div>
-      </div>
-
-      {/* ── 3. TWO-COLUMN MAIN BODY ── */}
-      <div className="db-columns-layout">
-
-        {/* ── TEMPLATE HUB (Left Column) ── */}
-        <div className="db-card db-hub-card">
-
-          {/* Card Header */}
-          <div className="db-card-header">
-            <div>
-              <h2 className="db-card-title">
-                <Sparkles size={16} className="db-primary-color" />
-                Template Hub
-              </h2>
-              <p className="db-card-desc">Browse, buy, and use DSHub and your own Canva designs</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              {credits !== null && (
-                <div className="db-credit-badge">
-                  <Coins size={12} />
-                  <span>{remainingCredits} credit{remainingCredits !== 1 ? 's' : ''}</span>
-                </div>
-              )}
-              <button onClick={() => router.push('/admin/templates')} className="db-browse-templates-link">
-                Browse All <ArrowUpRight size={13} />
-              </button>
             </div>
           </div>
 
-          {/* Tab Bar */}
-          <div className="db-hub-tabs">
-            {([
-              { id: 'gallery', label: 'DSHub Gallery', icon: <Sparkles size={13} /> },
-              { id: 'purchased', label: `My Purchases${purchases.length > 0 ? ` (${purchases.length})` : ''}`, icon: <CheckCircle2 size={13} /> },
-              { id: 'canva', label: 'My Canva Designs', icon: <Link2 size={13} /> },
-            ] as { id: HubTab; label: string; icon: React.ReactNode }[]).map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setHubTab(tab.id)}
-                className={`db-hub-tab ${hubTab === tab.id ? 'active' : ''}`}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Tab Body */}
-          <div className="db-card-body">
-
-            {/* ── TAB 1: DSHub Gallery ── */}
-            {hubTab === 'gallery' && (
-              galleryLoading ? (
-                <div className="db-loading-state">
-                  <Loader2 className="db-spin db-primary-color" size={22} />
-                  <span className="db-loading-text">Loading templates…</span>
-                </div>
-              ) : gallery.length === 0 ? (
-                <div className="db-empty-state-card">
-                  <div className="db-empty-icon-wrapper"><Sparkles size={22} /></div>
-                  <div className="db-empty-text-wrap">
-                    <p className="db-empty-title">No templates yet</p>
-                    <p className="db-empty-desc">Check back soon — templates are being added.</p>
-                  </div>
-                  <button onClick={() => router.push('/admin/templates')} className="db-btn-secondary">
-                    <ArrowUpRight size={13} /> Browse all templates
-                  </button>
-                </div>
-              ) : (
-                <div className="db-tpl-grid">
-                  {gallery.map((tpl) => {
-                    const owned = purchasedIds.has(tpl.id);
-                    const isBuying = buyingId === tpl.id;
-                    const cost = tpl.creditCost ?? 0;
-                    return (
-                      <div key={tpl.id} className="db-tpl-card">
-                        <div className="db-tpl-thumb">
-                          {getThumb(tpl) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={getThumb(tpl)!} alt={tpl.title} className="db-tpl-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : (
-                            <div className="db-tpl-thumb-placeholder"><Sparkles size={20} opacity={0.3} /></div>
-                          )}
-                          {owned && <div className="db-tpl-owned-badge"><CheckCircle2 size={11} /> Owned</div>}
-                          {cost > 0 && !owned && (
-                            <div className="db-tpl-credit-badge"><Coins size={10} /> {cost}</div>
-                          )}
-                        </div>
-                        <div className="db-tpl-info">
-                          <p className="db-tpl-title">{tpl.title || 'Untitled'}</p>
-                          {owned ? (
-                            <a
-                              href={tpl.canvaSmartEmbedLink || tpl.canvaPublicLink || '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="db-tpl-btn-open"
-                            >
-                              <ExternalLink size={11} /> Open in Canva
-                            </a>
-                          ) : (
-                            <button
-                              onClick={() => buyTemplate(tpl)}
-                              disabled={isBuying || buyingId !== null}
-                              className="db-tpl-btn-buy"
-                            >
-                              {isBuying ? <Loader2 size={11} className="db-spin" /> : <ShoppingBag size={11} />}
-                              {cost === 0 ? 'Get Free' : `Buy · ${cost} cr`}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* View more card */}
-                  <div className="db-tpl-card db-tpl-card-more" onClick={() => router.push('/admin/templates')}>
-                    <div className="db-tpl-more-inner">
-                      <ArrowUpRight size={22} style={{ opacity: 0.5 }} />
-                      <span>Browse all</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            )}
-
-            {/* ── TAB 2: My Purchased ── */}
-            {hubTab === 'purchased' && (
-              purchasesLoading ? (
-                <div className="db-loading-state">
-                  <Loader2 className="db-spin db-primary-color" size={22} />
-                  <span className="db-loading-text">Loading your library…</span>
-                </div>
-              ) : purchases.length === 0 ? (
-                <div className="db-empty-state-card">
-                  <div className="db-empty-icon-wrapper"><ShoppingBag size={22} /></div>
-                  <div className="db-empty-text-wrap">
-                    <p className="db-empty-title">No purchased templates yet</p>
-                    <p className="db-empty-desc">Browse the DSHub Gallery and buy templates with your credits.</p>
-                  </div>
-                  <button onClick={() => setHubTab('gallery')} className="db-btn-primary">
-                    <Sparkles size={13} /> Browse DSHub Gallery
-                  </button>
-                </div>
-              ) : (
-                <div className="db-tpl-grid">
-                  {purchases.map((p) => {
-                    const tpl = purchasedTemplates.get(p.dsCanvaTemplateId);
-                    return (
-                      <div key={p.id} className="db-tpl-card">
-                        <div className="db-tpl-thumb">
-                          {tpl && getThumb(tpl) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={getThumb(tpl!)!} alt={tpl?.title} className="db-tpl-img" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : (
-                            <div className="db-tpl-thumb-placeholder"><CheckCircle2 size={20} opacity={0.3} /></div>
-                          )}
-                          <div className="db-tpl-owned-badge"><CheckCircle2 size={11} /> Owned</div>
-                        </div>
-                        <div className="db-tpl-info">
-                          <p className="db-tpl-title">{tpl?.title || `Template #${p.dsCanvaTemplateId}`}</p>
-                          <a
-                            href={tpl?.canvaSmartEmbedLink || tpl?.canvaPublicLink || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="db-tpl-btn-open"
-                          >
-                            <ExternalLink size={11} /> Open in Canva
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            )}
-
-            {/* ── TAB 3: My Canva Designs ── */}
-            {hubTab === 'canva' && (
-              canvaLoading ? (
-                <div className="db-loading-state">
-                  <Loader2 className="db-spin db-primary-color" size={22} />
-                  <span className="db-loading-text">{t('DASHBOARD.loading_designs')}</span>
-                </div>
-              ) : canvaConnected && canvaDesigns.length > 0 ? (
-                <>
-                  <div className="db-canva-connected-bar">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <div className="db-canva-dot" />
-                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)' }}>Canva account connected</span>
-                    </div>
-                    <button onClick={() => router.push('/admin/templates')} className="db-browse-templates-link" style={{ fontSize: '0.7rem' }}>
-                      Manage <ArrowUpRight size={12} />
-                    </button>
-                  </div>
-                  <div className="db-canva-grid">
-                    {canvaDesigns.slice(0, 6).map((design) => (
-                      <div
-                        key={design.id}
-                        className="db-design-item"
-                        onClick={() => router.push(`/admin/templates?designId=${design.id}`)}
-                      >
-                        <div className="db-design-thumb-wrapper">
-                          {design.thumbnailUrl
-                            ? <img src={design.thumbnailUrl} alt={design.title} className="db-design-thumb" />
-                            : <div className="db-tpl-thumb-placeholder"><Palette size={16} opacity={0.3} /></div>
-                          }
-                        </div>
-                        <p className="db-design-title">{design.title || 'Untitled'}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="db-empty-state-card">
-                  <div className="db-empty-icon-wrapper"><Link2 size={24} /></div>
-                  <div className="db-empty-text-wrap">
-                    <p className="db-empty-title">{t('DASHBOARD.no_designs_matched')}</p>
-                    <p className="db-empty-desc">{t('DASHBOARD.no_designs_matched_desc')}</p>
-                  </div>
-                  <div className="db-empty-actions">
-                    <button onClick={connectCanva} disabled={canvaConnecting} className="db-btn-primary">
-                      {canvaConnecting ? <Loader2 className="db-spin" size={14} /> : <Link2 size={14} />}
-                      {t('DASHBOARD.connect_canva_account')}
-                    </button>
-                    <button onClick={() => router.push('/admin/templates')} className="db-btn-secondary">
-                      <Sparkles size={14} />{t('DASHBOARD.browse_gallery')}
-                    </button>
-                  </div>
-                </div>
-              )
-            )}
-
-          </div>
-        </div>
-
-        {/* ── Quick Stats (Right Column) ── */}
-        <div className="db-card db-stats-card">
-          <div className="db-card-header no-border">
-            <h2 className="db-card-title">{t('DASHBOARD.quick_stats')}</h2>
-          </div>
-          <div className="db-card-body">
-            {statsLoading ? (
-              <div className="db-loading-state"><Loader2 className="db-spin db-primary-color" size={24} /></div>
-            ) : (
-              <div className="db-stats-list">
-                <div className="db-stat-row" onClick={() => router.push('/admin/screens')}>
-                  <div className="db-stat-left">
-                    <div className="db-stat-icon-bg green"><Monitor size={15} /></div>
-                    <span className="db-stat-label">{t('DASHBOARD.screens_online')}</span>
-                  </div>
-                  <span className="db-stat-val green-text">{stats.screensOnline}</span>
-                </div>
-                <div className="db-stat-row" onClick={() => router.push('/admin/schedules')}>
-                  <div className="db-stat-left">
-                    <div className="db-stat-icon-bg purple"><Calendar size={15} /></div>
-                    <span className="db-stat-label">{t('DASHBOARD.scheduled_today')}</span>
-                  </div>
-                  <span className="db-stat-val purple-text">{stats.scheduledToday}</span>
-                </div>
-                <div className="db-stat-row" onClick={() => router.push('/admin/playlists')}>
-                  <div className="db-stat-left">
-                    <div className="db-stat-icon-bg orange"><FolderHeart size={15} /></div>
-                    <span className="db-stat-label">{t('DASHBOARD.playlists')}</span>
-                  </div>
-                  <span className="db-stat-val orange-text">{stats.playlists}</span>
-                </div>
-                <div className="db-stat-row" onClick={() => router.push('/admin/content')}>
-                  <div className="db-stat-left">
-                    <div className="db-stat-icon-bg blue"><FileVideo size={15} /></div>
-                    <span className="db-stat-label">{t('DASHBOARD.files')}</span>
-                  </div>
-                  <span className="db-stat-val blue-text">{stats.files}</span>
-                </div>
+          {/* MINIMAL SUBSCRIPTION (reduced weight) */}
+          {!subLoading && subPlan && (
+            <div className="db-sidebar-widget-sub">
+              <div className="db-sub-plan-badge-compact">
+                <Star size={11} />
+                <span>{subPlan.planType || 'Free'} Plan</span>
               </div>
-            )}
-          </div>
+              <span className="db-sub-plan-licenses-compact">{subPlan.usedScreens} / {subPlan.totalScreens} screen licenses used</span>
+            </div>
+          )}
+
         </div>
 
       </div>
 
-      {/* ── 4. TIP BAR ── */}
-      {(!currentUser?.organization?.name || currentUser.organization.name === 'My Organization') ? (
-        <div className="db-tip-bar db-tip-bar--warning">
-          <Building2 size={16} className="db-tip-icon--warning" />
-          <span className="db-tip-text">{t('DASHBOARD.org_info_warning')}</span>
-          <button onClick={() => router.push('/admin/my-account?tab=organization')} className="db-tip-action-btn">
-            {t('DASHBOARD.update_org_info')}
-          </button>
-        </div>
-      ) : (
-        <div className="db-tip-bar">
-          <Lightbulb size={16} className="db-tip-icon" />
-          <span className="db-tip-text">{t('DASHBOARD.tip_bar_default')}</span>
+      {/* ─── TEMPLATE PREVIEW MODAL ─── */}
+      {previewTemplate && (
+        <div className="db-preview-modal-overlay" onClick={() => setPreviewTemplate(null)}>
+          <div className="db-preview-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="db-preview-modal-header">
+              <h3 className="db-preview-modal-title">{previewTemplate.title || 'Template Details'}</h3>
+              <button className="db-preview-close-btn" onClick={() => setPreviewTemplate(null)}>×</button>
+            </div>
+            <div className="db-preview-modal-body">
+              <div className="db-preview-layout-grid">
+                
+                {/* Fixed preview container with contain ratio */}
+                <div className="db-preview-image-section">
+                  {getThumb(previewTemplate) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={getThumb(previewTemplate)!} alt={previewTemplate.title} className="db-preview-large-img" />
+                  ) : (
+                    <div className="db-preview-placeholder-bg"><Sparkles size={48} opacity={0.15} /></div>
+                  )}
+                </div>
+
+                <div className="db-preview-info-section">
+                  <div className="db-preview-tags-row">
+                    <span className="db-preview-badge">Digital Template</span>
+                    <span className="db-preview-badge dim">{previewTemplate.width || 1920} × {previewTemplate.height || 1080}px</span>
+                    {purchasedIds.has(previewTemplate.id) && (
+                      <span className="db-preview-badge green">Unlocked</span>
+                    )}
+                  </div>
+
+                  <p className="db-preview-description">
+                    {previewTemplate.description || 'No template description available. Enhance your signage layouts using premium Canva integration directly on DSHub screens.'}
+                  </p>
+
+                  <div className="db-preview-cost-area">
+                    <Coins size={16} className="gold-text" />
+                    <span className="db-preview-cost-val">Cost: <strong>{previewTemplate.creditCost ?? 0} Credits</strong></span>
+                  </div>
+
+                  <div className="db-preview-modal-actions">
+                    {purchasedIds.has(previewTemplate.id) ? (
+                      <button className="db-preview-action-btn primary" onClick={() => handleUseTemplate(previewTemplate)}>
+                        <ExternalLink size={14} />
+                        <span>Open in Canva</span>
+                      </button>
+                    ) : (
+                      <button 
+                        className="db-preview-action-btn primary" 
+                        disabled={buyingId !== null}
+                        onClick={() => buyTemplate(previewTemplate)}
+                      >
+                        {buyingId === previewTemplate.id ? <Loader2 size={14} className="db-spin" /> : <ShoppingBag size={14} />}
+                        <span>Unlock Design ({previewTemplate.creditCost ?? 0} cr)</span>
+                      </button>
+                    )}
+                    <button className="db-preview-action-btn secondary" onClick={() => setPreviewTemplate(null)}>
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── Styles ── */}
+      {/* ─── COMPACT PREVIEW/CANVA STYLES ─── */}
       <style>{`
+        /* Base page layout */
         .db-page {
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
           padding: 0 0.5rem;
+          animation: dbFadeIn 0.35s ease-out;
         }
 
-        /* Welcome Card */
-        .db-welcome-card {
+        @keyframes dbFadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .db-main-container {
+          display: grid;
+          grid-template-columns: 1fr 270px;
+          gap: 1.5rem;
+          align-items: start;
+        }
+
+        /* Left Side */
+        .db-content-left {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        /* 1. Compact Hero Banner */
+        .db-compact-hero {
           position: relative;
-          background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(168,85,247,0.06) 100%);
-          border: 1px solid var(--border);
+          background: linear-gradient(135deg, #4f46e5 0%, #7d2ae8 60%, #ec4899 100%);
           border-radius: 20px;
-          padding: 2rem;
+          padding: 1.75rem 2rem;
+          color: white;
+          overflow: hidden;
+          box-shadow: 0 10px 30px rgba(125, 42, 232, 0.12);
+        }
+
+        .db-hero-glass-shine {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
+          pointer-events: none;
+        }
+
+        .db-hero-inner {
+          position: relative;
+          z-index: 2;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 1.5rem;
+        }
+
+        .db-hero-left {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+        }
+
+        .db-hero-badge {
+          align-self: flex-start;
+          font-size: 0.62rem;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.25);
+          padding: 0.25rem 0.65rem;
+          border-radius: 20px;
+        }
+
+        .db-hero-pitch {
+          font-size: 0.92rem;
+          line-height: 1.45;
+          margin: 0;
+          max-width: 540px;
+          opacity: 0.95;
+          font-weight: 500;
+        }
+
+        .db-hero-ctas {
+          display: flex;
+          gap: 0.75rem;
+          margin-top: 0.25rem;
+        }
+
+        .db-cta-primary {
+          background: white;
+          color: #7d2ae8;
+          border: none;
+          font-weight: 700;
+          font-size: 0.78rem;
+          padding: 0.55rem 1.1rem;
+          border-radius: 10px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+          transition: all 0.2s;
+        }
+
+        .db-cta-primary:hover {
+          transform: translateY(-1px);
+          background: #fbfbfd;
+        }
+
+        .db-cta-secondary {
+          background: rgba(255, 255, 255, 0.12);
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          color: white;
+          font-weight: 600;
+          font-size: 0.78rem;
+          padding: 0.55rem 1.1rem;
+          border-radius: 10px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          backdrop-filter: blur(8px);
+          transition: all 0.2s;
+        }
+
+        .db-cta-secondary:hover {
+          background: rgba(255, 255, 255, 0.18);
+          transform: translateY(-1px);
+        }
+
+        .db-hero-right {
+          flex-shrink: 0;
+        }
+
+        .db-credits-hero-card {
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(10px);
+          padding: 0.85rem 1.25rem;
+          border-radius: 16px;
           display: flex;
           align-items: center;
+          gap: 0.65rem;
+        }
+
+        .db-credits-hero-icon {
+          color: #f59e0b;
+          width: 24px;
+          height: 24px;
+        }
+
+        .db-credits-hero-details {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .db-credits-hero-lbl {
+          font-size: 0.62rem;
+          opacity: 0.8;
+          text-transform: uppercase;
+          font-weight: 600;
+        }
+
+        .db-credits-hero-val {
+          font-size: 1.15rem;
+          font-weight: 800;
+        }
+
+        /* 2. Template Discovery Panel */
+        .db-discovery-panel {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          padding: 1.25rem 1.5rem;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
+        .db-discovery-header {
+          display: flex;
           justify-content: space-between;
+          align-items: center;
+          gap: 1.5rem;
+          flex-wrap: wrap;
+        }
+
+        .db-discovery-title {
+          font-size: 1rem;
+          font-weight: 700;
+          color: var(--text);
+          margin: 0;
+        }
+
+        .db-discovery-title-small {
+          font-size: 0.88rem;
+          font-weight: 700;
+          color: var(--text);
+          margin: 0 0 0.25rem;
+        }
+
+        .db-discovery-sub {
+          font-size: 0.72rem;
+          color: var(--text-muted);
+          margin: 0.15rem 0 0;
+        }
+
+        /* Search Bar */
+        .db-search-bar-wrapper {
+          position: relative;
+          width: 220px;
+        }
+
+        .db-search-icon {
+          position: absolute;
+          left: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--text-muted);
+          opacity: 0.6;
+        }
+
+        .db-search-input-premium {
+          width: 100%;
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 0.4rem 0.6rem 0.4rem 1.85rem;
+          font-size: 0.75rem;
+          color: var(--text);
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .db-search-input-premium:focus {
+          border-color: #7d2ae8;
+          background: var(--card-bg);
+        }
+
+        /* Category pills selection */
+        .db-category-pills {
+          display: flex;
+          gap: 0.4rem;
+          overflow-x: auto;
+          scrollbar-width: none;
+          padding-bottom: 0.15rem;
+        }
+
+        .db-category-pills::-webkit-scrollbar {
+          display: none;
+        }
+
+        .db-pill-btn {
+          flex-shrink: 0;
+          padding: 0.4rem 0.8rem;
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          background: var(--card-bg);
+          color: var(--text-muted);
+          font-size: 0.72rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .db-pill-btn:hover {
+          border-color: #7d2ae8;
+          color: #7d2ae8;
+        }
+
+        .db-pill-btn.active {
+          background: #7d2ae8;
+          color: white;
+          border-color: #7d2ae8;
+          box-shadow: 0 4px 10px rgba(125, 42, 232, 0.12);
+        }
+
+        /* Large template card grid (2 per row) */
+        .db-large-templates-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 1.25rem;
+        }
+
+        .db-large-template-card {
+          background: #ffffff;
+          border: 1px solid var(--border);
+          border-radius: 16px;
           overflow: hidden;
-          min-height: 180px;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+          display: flex;
+          flex-direction: column;
         }
-        .db-welcome-left { display: flex; flex-direction: column; gap: 0.75rem; z-index: 2; }
-        .db-welcome-title { font-size: 1.75rem; font-weight: 800; color: var(--text); margin: 0; letter-spacing: -0.02em; }
-        .db-location-context { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--text-muted); }
-        .db-location-label { font-weight: 500; }
-        .db-location-loading { color: var(--accent); font-weight: 600; }
-        .db-location-actions { display: flex; align-items: center; gap: 0.5rem; }
-        .db-location-add-btn { background: rgba(99,102,241,0.1); color: var(--accent); border: 1px solid rgba(99,102,241,0.2); padding: 0.2rem 0.65rem; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
-        .db-location-add-btn:hover { background: rgba(99,102,241,0.18); }
-        .db-location-trigger-btn { background: none; border: none; color: var(--accent); font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer; padding: 0.15rem 0.35rem; border-radius: 4px; }
-        .db-location-trigger-btn:hover { background: rgba(99,102,241,0.05); }
-        .db-chevron { transition: transform 0.2s; }
-        .db-chevron.open { transform: rotate(180deg); }
-        .db-dropdown-overlay { position: fixed; inset: 0; z-index: 10; }
-        .db-location-dropdown { position: absolute; left: 0; top: calc(100% + 6px); width: 220px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 20; padding: 0.35rem 0; animation: db-dropdown-anim 0.15s ease-out; }
-        @keyframes db-dropdown-anim { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-        .db-dropdown-header { font-size: 0.65rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.08em; padding: 0.45rem 1rem; margin: 0; }
-        .db-dropdown-list { max-height: 200px; overflow-y: auto; }
-        .db-dropdown-item { width: 100%; border: none; background: none; padding: 0.5rem 1rem; font-size: 0.78rem; color: var(--text); display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-align: left; transition: background 0.1s; }
-        .db-dropdown-item:hover { background: var(--sidebar-hover); }
-        .db-dropdown-item.active { color: var(--accent); font-weight: 700; background: rgba(99,102,241,0.04); }
-        .db-dropdown-icon { color: var(--text-muted); opacity: 0.7; }
-        .db-dropdown-item.active .db-dropdown-icon { color: var(--accent); opacity: 1; }
-        .db-dropdown-footer { border-top: 1px solid var(--border); margin-top: 0.35rem; padding: 0.35rem 0.5rem 0; }
-        .db-add-loc-btn { width: 100%; background: none; border: none; color: var(--accent); font-weight: 600; font-size: 0.75rem; display: flex; align-items: center; gap: 0.4rem; padding: 0.45rem 0.5rem; cursor: pointer; border-radius: 8px; }
-        .db-add-loc-btn:hover { background: var(--sidebar-hover); }
-        .db-welcome-right { position: absolute; right: 0; top: 0; bottom: 0; width: 340px; display: flex; align-items: center; justify-content: flex-end; pointer-events: none; overflow: hidden; border-radius: 0 20px 20px 0; }
-        .db-welcome-svg { width: 100%; height: 100%; color: var(--text-muted); }
 
-        /* Action Grid */
-        .db-action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
-        .db-action-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; display: flex; align-items: center; gap: 0.85rem; cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); }
-        .db-action-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 8px 24px rgba(99,102,241,0.05); }
-        .db-action-icon-wrapper { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .db-action-icon-wrapper.purple { background: rgba(99,102,241,0.1); color: var(--accent); }
-        .db-action-icon-wrapper.pink { background: rgba(236,72,153,0.1); color: #ec4899; }
-        .db-action-icon-wrapper.deep-purple { background: rgba(139,92,246,0.1); color: var(--accent); }
-        .db-action-icon-wrapper.green { background: rgba(34,197,94,0.1); color: #22c55e; }
-        .db-action-text-wrapper { flex: 1; overflow: hidden; }
-        .db-action-card-title { font-size: 0.85rem; font-weight: 700; color: var(--text); margin: 0 0 0.15rem; }
-        .db-action-card-desc { font-size: 0.7rem; color: var(--text-muted); margin: 0; line-height: 1.3; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .db-action-arrow { width: 24px; height: 24px; border-radius: 50%; background: var(--sidebar-bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s; flex-shrink: 0; }
-        .db-action-card:hover .db-action-arrow { background: var(--accent); color: white; border-color: var(--accent); transform: translateX(1px); }
+        .db-large-template-card:hover {
+          transform: translateY(-2px);
+          border-color: #7d2ae8;
+          box-shadow: 0 10px 24px rgba(125, 42, 232, 0.08);
+        }
 
-        /* Columns Layout */
-        .db-columns-layout { display: grid; grid-template-columns: 1fr 300px; gap: 1.5rem; }
-        .db-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; }
-        .db-card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-        .db-card-header.no-border { border-bottom: none; }
-        .db-card-title { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0; display: flex; align-items: center; gap: 0.5rem; }
-        .db-card-desc { font-size: 0.7rem; color: var(--text-muted); margin: 0.2rem 0 0; }
-        .db-browse-templates-link { background: none; border: none; color: var(--accent); font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer; padding: 0; white-space: nowrap; }
-        .db-browse-templates-link:hover { text-decoration: underline; }
-        .db-card-body { flex: 1; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; }
+        /* Center-preview in light gray background */
+        .db-card-preview-container {
+          position: relative;
+          width: 100%;
+          aspect-ratio: 16/10;
+          background: #f8fafc;
+          border-bottom: 1px solid var(--border);
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
 
-        /* Credit Badge */
-        .db-credit-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.65rem; border-radius: 20px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: #f59e0b; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+        .db-card-preview-image {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          display: block;
+        }
 
-        /* Hub Tabs */
-        .db-hub-card { min-height: 340px; }
-        .db-hub-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 1.5rem; gap: 0; }
-        .db-hub-tab { display: flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1rem; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; margin-bottom: -1px; }
-        .db-hub-tab:hover { color: var(--text); }
-        .db-hub-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .db-card-preview-placeholder {
+          color: var(--text-muted);
+          opacity: 0.6;
+        }
 
-        /* Template Grid */
-        .db-tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.75rem; }
-        .db-tpl-card { border-radius: 12px; border: 1px solid var(--border); background: var(--sidebar-bg); overflow: hidden; cursor: pointer; transition: all 0.18s; }
-        .db-tpl-card:hover { border-color: var(--accent); box-shadow: 0 6px 20px rgba(99,102,241,0.1); transform: translateY(-2px); }
-        .db-tpl-thumb { position: relative; aspect-ratio: 4/3; background: var(--bg-base); overflow: hidden; }
-        .db-tpl-img { width: 100%; height: 100%; object-fit: cover; }
-        .db-tpl-thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
-        .db-tpl-owned-badge { position: absolute; top: 5px; left: 5px; display: flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 6px; background: rgba(34,197,94,0.85); color: #fff; font-size: 0.6rem; font-weight: 700; backdrop-filter: blur(4px); }
-        .db-tpl-credit-badge { position: absolute; top: 5px; right: 5px; display: flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 6px; background: rgba(245,158,11,0.85); color: #fff; font-size: 0.6rem; font-weight: 700; backdrop-filter: blur(4px); }
-        .db-tpl-info { padding: 0.5rem 0.6rem; display: flex; flex-direction: column; gap: 0.35rem; }
-        .db-tpl-title { margin: 0; font-size: 0.68rem; font-weight: 600; color: var(--text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-        .db-tpl-btn-buy { display: flex; align-items: center; justify-content: center; gap: 0.3rem; width: 100%; padding: 0.3rem 0.5rem; border-radius: 7px; border: none; background: var(--accent); color: #fff; font-size: 0.63rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
-        .db-tpl-btn-buy:hover { opacity: 0.88; }
-        .db-tpl-btn-buy:disabled { opacity: 0.5; cursor: not-allowed; }
-        .db-tpl-btn-open { display: flex; align-items: center; justify-content: center; gap: 0.3rem; width: 100%; padding: 0.3rem 0.5rem; border-radius: 7px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-muted); font-size: 0.63rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s; }
-        .db-tpl-btn-open:hover { border-color: var(--accent); color: var(--accent); }
-        .db-tpl-card-more { background: var(--bg-base); border-style: dashed; }
-        .db-tpl-card-more:hover { border-color: var(--accent); }
-        .db-tpl-more-inner { height: 100%; min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem; color: var(--text-muted); font-size: 0.68rem; font-weight: 600; }
+        /* Badges inside card preview */
+        .db-card-top-left-badges {
+          position: absolute;
+          top: 8px;
+          left: 8px;
+          display: flex;
+          gap: 0.3rem;
+        }
 
-        /* Canva Connected Bar */
-        .db-canva-connected-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0.75rem; border-radius: 8px; background: rgba(34,197,94,0.07); border: 1px solid rgba(34,197,94,0.2); margin-bottom: 0.85rem; }
-        .db-canva-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.6); animation: db-pulse 2s infinite; }
-        @keyframes db-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .db-badge-orientation {
+          background: rgba(0, 0, 0, 0.65);
+          color: white;
+          font-size: 0.58rem;
+          font-weight: 700;
+          padding: 0.2rem 0.45rem;
+          border-radius: 4px;
+          backdrop-filter: blur(2px);
+        }
 
-        /* Canva Grid */
-        .db-canva-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.75rem; }
-        .db-design-item { cursor: pointer; display: flex; flex-direction: column; gap: 0.4rem; }
-        .db-design-thumb-wrapper { aspect-ratio: 16/10; border-radius: 10px; border: 1px solid var(--border); background: rgba(0,0,0,0.05); overflow: hidden; }
-        .db-design-thumb { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
-        .db-design-item:hover .db-design-thumb { transform: scale(1.04); }
-        .db-design-title { font-size: 0.68rem; font-weight: 600; color: var(--text); margin: 0; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+        .db-badge-size {
+          background: rgba(255, 255, 255, 0.85);
+          color: #333;
+          font-size: 0.58rem;
+          font-weight: 600;
+          padding: 0.2rem 0.45rem;
+          border-radius: 4px;
+          border: 1px solid rgba(0,0,0,0.05);
+        }
 
-        /* Empty State */
-        .db-empty-state-card { margin: auto; display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 280px; gap: 0.85rem; padding: 2rem 0; }
-        .db-empty-icon-wrapper { width: 52px; height: 52px; border-radius: 50%; border: 1px dashed rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; color: var(--accent); background: rgba(99,102,241,0.04); }
-        .db-empty-text-wrap { display: flex; flex-direction: column; gap: 0.2rem; }
-        .db-empty-title { font-size: 0.8rem; font-weight: 700; color: var(--text); margin: 0; }
-        .db-empty-desc { font-size: 0.7rem; color: var(--text-muted); margin: 0; line-height: 1.4; }
-        .db-empty-actions { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
-        .db-btn-primary { width: 100%; background: var(--btn-cta-bg); color: var(--btn-cta-text); border: none; padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer; transition: all 0.2s ease; }
-        .db-btn-primary:hover { background: var(--btn-cta-hover); }
-        .db-btn-primary:disabled { opacity: .55; cursor: not-allowed; }
-        .db-btn-secondary { width: 100%; background: var(--btn-secondary-bg); color: var(--btn-secondary-text); border: 1px solid var(--btn-secondary-border); padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.74rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.4rem; cursor: pointer; transition: all 0.2s ease; }
-        .db-btn-secondary:hover { background: var(--btn-secondary-hover); }
+        .db-card-top-right-badges {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+        }
 
-        /* Stats Card */
-        .db-stats-card { background: var(--card-bg); }
-        .db-stats-list { display: flex; flex-direction: column; gap: 0.6rem; }
-        .db-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 0.7rem 0.9rem; border-radius: 12px; border: 1px solid var(--border); background: var(--sidebar-bg); cursor: pointer; transition: all 0.15s; }
-        .db-stat-row:hover { border-color: var(--accent); background: var(--card-bg); }
-        .db-stat-left { display: flex; align-items: center; gap: 0.65rem; }
-        .db-stat-icon-bg { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-        .db-stat-icon-bg.green { background: rgba(34,197,94,0.1); color: #22c55e; }
-        .db-stat-icon-bg.purple { background: rgba(139,92,246,0.1); color: var(--accent); }
-        .db-stat-icon-bg.orange { background: rgba(245,158,11,0.1); color: #f59e0b; }
-        .db-stat-icon-bg.blue { background: rgba(59,130,246,0.1); color: #3b82f6; }
-        .db-stat-label { font-size: 0.76rem; font-weight: 600; color: var(--text); }
-        .db-stat-val { font-size: 0.85rem; font-weight: 800; }
-        .db-stat-val.green-text { color: #22c55e; }
-        .db-stat-val.purple-text { color: var(--accent); }
-        .db-stat-val.orange-text { color: #f59e0b; }
-        .db-stat-val.blue-text { color: #3b82f6; }
+        .db-badge-credits {
+          font-size: 0.58rem;
+          font-weight: 700;
+          padding: 0.2rem 0.45rem;
+          border-radius: 4px;
+          color: white;
+        }
 
-        /* Tip Bar */
-        .db-tip-bar { background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.15); border-radius: 12px; padding: 0.75rem 1.25rem; display: flex; align-items: center; gap: 0.65rem; }
-        .db-tip-bar--warning { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.25); }
-        .db-tip-icon { color: var(--accent); flex-shrink: 0; }
-        .db-tip-icon--warning { color: #f59e0b; flex-shrink: 0; }
-        .db-tip-text { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; line-height: 1.4; flex: 1; }
-        .db-tip-action-btn { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; font-size: 0.7rem; font-weight: 700; padding: 0.3rem 0.75rem; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
-        .db-tip-action-btn:hover { background: rgba(245,158,11,0.2); border-color: rgba(245,158,11,0.5); }
+        .db-badge-credits.owned { background: #22c55e; }
+        .db-badge-credits.free { background: #3b82f6; }
+        .db-badge-credits.cost { background: #f59e0b; }
 
-        /* Utilities */
-        .db-loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 160px; gap: 0.5rem; color: var(--text-muted); }
-        .db-loading-text { font-size: 0.72rem; }
-        .db-primary-color { color: var(--accent); }
-        .db-spin { animation: db-spin-key 1s linear infinite; }
-        @keyframes db-spin-key { to { transform: rotate(360deg); } }
+        /* Card details */
+        .db-card-details-row {
+          padding: 0.75rem 1rem 0.85rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 1rem;
+          background: #ffffff;
+        }
 
-        /* Responsive */
+        .db-card-info-texts {
+          flex: 1;
+          overflow: hidden;
+        }
+
+        .db-card-title-text {
+          margin: 0;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #1e293b;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .db-card-actions-wrapper {
+          display: flex;
+          gap: 0.35rem;
+          flex-shrink: 0;
+        }
+
+        .db-btn-card-preview {
+          background: #f1f5f9;
+          color: #475569;
+          border: none;
+          border-radius: 6px;
+          padding: 0.35rem 0.6rem;
+          font-size: 0.68rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+        }
+
+        .db-btn-card-preview:hover {
+          background: #e2e8f0;
+        }
+
+        .db-btn-card-action {
+          border: none;
+          border-radius: 6px;
+          padding: 0.35rem 0.65rem;
+          font-size: 0.68rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          color: white;
+        }
+
+        .db-btn-card-action.use { background: #7d2ae8; }
+        .db-btn-card-action.buy { background: #f59e0b; }
+        .db-btn-card-action:hover { opacity: 0.9; }
+
+        /* 3. Horizontal recommended list */
+        .db-horizontal-recommended-row {
+          display: flex;
+          gap: 0.85rem;
+          overflow-x: auto;
+          scrollbar-width: thin;
+          padding-bottom: 0.5rem;
+        }
+
+        .db-recommended-card-item {
+          flex-shrink: 0;
+          width: 140px;
+          background: #ffffff;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: border-color 0.15s;
+        }
+
+        .db-recommended-card-item:hover {
+          border-color: #7d2ae8;
+        }
+
+        .db-recommended-thumb-area {
+          position: relative;
+          aspect-ratio: 4/3;
+          background: var(--bg-base);
+          overflow: hidden;
+        }
+
+        .db-recommended-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .db-recommended-orient-lbl {
+          position: absolute;
+          bottom: 4px;
+          left: 4px;
+          background: rgba(0,0,0,0.6);
+          color: white;
+          font-size: 0.5rem;
+          font-weight: 600;
+          padding: 1px 3px;
+          border-radius: 3px;
+        }
+
+        .db-recommended-cost-lbl {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          background: rgba(245, 158, 11, 0.85);
+          color: white;
+          font-size: 0.5rem;
+          font-weight: 700;
+          padding: 1px 3px;
+          border-radius: 3px;
+        }
+
+        .db-recommended-info {
+          padding: 0.35rem;
+        }
+
+        .db-recommended-title {
+          margin: 0;
+          font-size: 0.65rem;
+          font-weight: 600;
+          color: var(--text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        /* 4. Operations Panel (At the bottom) */
+        .db-operations-panel {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          padding: 1.25rem 1.5rem;
+        }
+
+        .db-operations-title {
+          font-size: 0.85rem;
+          font-weight: 700;
+          color: var(--text);
+          margin: 0 0 0.85rem;
+        }
+
+        .db-operations-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 0.75rem;
+        }
+
+        .db-ops-card {
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 0.65rem 0.85rem;
+          display: flex;
+          align-items: center;
+          gap: 0.65rem;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+
+        .db-ops-card:hover {
+          border-color: #7d2ae8;
+          background: var(--card-bg);
+        }
+
+        .db-ops-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .db-ops-icon.purple { background: rgba(125, 42, 232, 0.08); color: #7d2ae8; }
+        .db-ops-icon.pink { background: rgba(236, 72, 153, 0.08); color: #ec4899; }
+        .db-ops-icon.indigo { background: rgba(79, 70, 229, 0.08); color: #4f46e5; }
+        .db-ops-icon.green { background: rgba(34, 197, 94, 0.08); color: #22c55e; }
+
+        .db-ops-texts {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .db-ops-name {
+          font-size: 0.74rem;
+          font-weight: 700;
+          color: var(--text);
+        }
+
+        .db-ops-desc {
+          font-size: 0.58rem;
+          color: var(--text-muted);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .db-ops-arrow {
+          color: var(--text-muted);
+          opacity: 0.5;
+        }
+
+        /* ─── SIDEBAR WIDGETS ─── */
+        .db-sidebar-widget {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          padding: 1.25rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.85rem;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.01);
+        }
+
+        .db-widget-title {
+          font-size: 0.78rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--text-muted);
+          margin: 0;
+        }
+
+        /* Sidebar Credits */
+        .db-sidebar-credits-box {
+          display: flex;
+          flex-direction: column;
+          gap: 0.65rem;
+          align-items: center;
+        }
+
+        .db-circular-display {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 90px;
+          height: 90px;
+          border: 6px solid #f59e0b;
+          border-radius: 50%;
+        }
+
+        .db-circular-number {
+          font-size: 1.4rem;
+          font-weight: 800;
+          color: var(--text);
+          line-height: 1;
+        }
+
+        .db-circular-lbl {
+          font-size: 0.55rem;
+          font-weight: 600;
+          color: var(--text-muted);
+          text-transform: uppercase;
+        }
+
+        .db-credits-progress-horizontal-bg {
+          width: 100%;
+          height: 5px;
+          background: var(--border);
+          border-radius: 10px;
+          overflow: hidden;
+        }
+
+        .db-credits-progress-horizontal-fill {
+          height: 100%;
+          background: #f59e0b;
+          border-radius: 10px;
+        }
+
+        .db-credits-metrics-row {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          font-size: 0.68rem;
+          color: var(--text-muted);
+        }
+
+        .db-widget-buy-btn {
+          width: 100%;
+          background: linear-gradient(135deg, #7d2ae8 0%, #ec4899 100%);
+          color: white;
+          border: none;
+          padding: 0.5rem;
+          border-radius: 8px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.35rem;
+          box-shadow: 0 4px 10px rgba(125, 42, 232, 0.12);
+        }
+
+        /* Stats compact widgets */
+        .db-widget-stats-rows {
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+        }
+
+        .db-widget-stat-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.45rem 0.65rem;
+          border-radius: 8px;
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          cursor: pointer;
+          transition: border-color 0.15s;
+        }
+
+        .db-widget-stat-row:hover {
+          border-color: #7d2ae8;
+        }
+
+        .db-widget-stat-icon {
+          width: 22px;
+          height: 22px;
+          border-radius: 5px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .db-widget-stat-icon.green { background: rgba(34, 197, 94, 0.07); color: #22c55e; }
+        .db-widget-stat-icon.purple { background: rgba(125, 42, 232, 0.07); color: #7d2ae8; }
+        .db-widget-stat-icon.orange { background: rgba(245, 158, 11, 0.07); color: #f59e0b; }
+
+        .db-widget-stat-label {
+          font-size: 0.68rem;
+          color: var(--text-muted);
+          flex: 1;
+        }
+
+        .db-widget-stat-val {
+          font-size: 0.68rem;
+          font-weight: 700;
+        }
+
+        .db-widget-stat-val.green-text { color: #22c55e; }
+        .db-widget-stat-val.purple-text { color: #7d2ae8; }
+
+        .db-widget-spinner {
+          width: 12px;
+          height: 12px;
+          border: 2px solid var(--border);
+          border-top-color: #7d2ae8;
+          border-radius: 50%;
+          animation: db-spin-key 0.8s linear infinite;
+        }
+
+        /* Sidebar Org/Location */
+        .db-widget-org-body {
+          display: flex;
+          flex-direction: column;
+          gap: 0.65rem;
+        }
+
+        .db-widget-org-desc {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+
+        .db-widget-icon-dim {
+          color: var(--text-muted);
+          opacity: 0.6;
+        }
+
+        .db-widget-org-name-text {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: var(--text);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .db-widget-loc-picker-container {
+          position: relative;
+        }
+
+        .db-widget-loc-trigger {
+          width: 100%;
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          border-radius: 6px;
+          padding: 0.4rem 0.6rem;
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+          cursor: pointer;
+          color: var(--text);
+          text-align: left;
+        }
+
+        .db-widget-loc-name-txt {
+          font-size: 0.68rem;
+          font-weight: 700;
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .db-widget-loc-chevron {
+          color: var(--text-muted);
+          transition: transform 0.2s;
+        }
+
+        .db-widget-loc-chevron.open {
+          transform: rotate(180deg);
+        }
+
+        .db-widget-loc-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+        }
+
+        .db-widget-loc-popover {
+          position: absolute;
+          right: 0;
+          bottom: calc(100% + 6px);
+          width: 200px;
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          box-shadow: 0 -8px 24px rgba(0,0,0,0.15);
+          z-index: 200;
+          padding: 0.35rem 0;
+        }
+
+        .db-popover-title {
+          font-size: 0.6rem;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: var(--text-muted);
+          padding: 0.3rem 0.75rem;
+          margin: 0;
+        }
+
+        .db-popover-scrollable {
+          max-height: 140px;
+          overflow-y: auto;
+        }
+
+        .db-popover-item {
+          width: 100%;
+          border: none;
+          background: none;
+          padding: 0.4rem 0.75rem;
+          font-size: 0.7rem;
+          color: var(--text);
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          cursor: pointer;
+          text-align: left;
+        }
+
+        .db-popover-item:hover {
+          background: var(--sidebar-hover);
+        }
+
+        .db-popover-item.active {
+          color: #7d2ae8;
+          font-weight: 700;
+          background: rgba(125, 42, 232, 0.04);
+        }
+
+        .db-popover-footer {
+          border-top: 1px solid var(--border);
+          margin-top: 0.25rem;
+          padding: 0.25rem 0.4rem 0;
+        }
+
+        .db-popover-add-btn {
+          width: 100%;
+          background: none;
+          border: none;
+          color: #7d2ae8;
+          font-weight: 700;
+          font-size: 0.68rem;
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
+          padding: 0.35rem;
+          cursor: pointer;
+          border-radius: 5px;
+        }
+
+        .db-popover-add-btn:hover {
+          background: var(--sidebar-hover);
+        }
+
+        /* Subscription compact widget */
+        .db-sidebar-widget-sub {
+          background: rgba(125, 42, 232, 0.04);
+          border: 1px solid rgba(125, 42, 232, 0.15);
+          border-radius: 12px;
+          padding: 0.65rem 0.85rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .db-sub-plan-badge-compact {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          color: #7d2ae8;
+          font-size: 0.68rem;
+          font-weight: 700;
+        }
+
+        .db-sub-plan-licenses-compact {
+          font-size: 0.6rem;
+          color: var(--text-muted);
+        }
+
+        /* ─── PREVIEW DIALOG MODAL ─── */
+        .db-preview-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .db-preview-modal-card {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          width: 680px;
+          max-width: 90vw;
+          box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+          overflow: hidden;
+          animation: dbModalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes dbModalScaleIn {
+          from { opacity: 0; transform: scale(0.97) translateY(6px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .db-preview-modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 1rem 1.25rem;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .db-preview-modal-title {
+          margin: 0;
+          font-size: 0.95rem;
+          font-weight: 700;
+          color: var(--text);
+        }
+
+        .db-preview-close-btn {
+          background: none;
+          border: none;
+          font-size: 1.4rem;
+          color: var(--text-muted);
+          cursor: pointer;
+          padding: 0;
+          line-height: 1;
+        }
+
+        .db-preview-modal-body {
+          padding: 1.25rem;
+        }
+
+        .db-preview-layout-grid {
+          display: grid;
+          grid-template-columns: 1.15fr 0.85fr;
+          gap: 1.25rem;
+        }
+
+        /* Preview container max sizes contain */
+        .db-preview-image-section {
+          background: #f8fafc;
+          border-radius: 10px;
+          border: 1px solid var(--border);
+          aspect-ratio: 4/3;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.5rem;
+        }
+
+        .db-preview-large-img {
+          max-width: 100%;
+          max-height: 100%;
+          object-fit: contain;
+          display: block;
+        }
+
+        .db-preview-placeholder-bg {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--text-muted);
+          width: 100%;
+          height: 100%;
+        }
+
+        .db-preview-info-section {
+          display: flex;
+          flex-direction: column;
+          gap: 0.85rem;
+        }
+
+        .db-preview-tags-row {
+          display: flex;
+          gap: 0.35rem;
+          flex-wrap: wrap;
+        }
+
+        .db-preview-badge {
+          background: rgba(125, 42, 232, 0.08);
+          border: 1px solid rgba(125, 42, 232, 0.2);
+          color: #7d2ae8;
+          font-size: 0.62rem;
+          font-weight: 700;
+          padding: 0.15rem 0.5rem;
+          border-radius: 5px;
+        }
+
+        .db-preview-badge.dim {
+          background: var(--bg-base);
+          border-color: var(--border);
+          color: var(--text-muted);
+        }
+
+        .db-preview-badge.green {
+          background: rgba(34, 197, 94, 0.08);
+          border-color: rgba(34, 197, 94, 0.2);
+          color: #22c55e;
+        }
+
+        .db-preview-description {
+          font-size: 0.74rem;
+          color: var(--text-muted);
+          line-height: 1.45;
+          margin: 0;
+        }
+
+        .db-preview-cost-area {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          font-size: 0.8rem;
+          color: var(--text);
+        }
+
+        .db-preview-cost-val strong {
+          color: #f59e0b;
+        }
+
+        .db-preview-modal-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+          margin-top: auto;
+          padding-top: 0.75rem;
+        }
+
+        .db-preview-action-btn {
+          width: 100%;
+          padding: 0.55rem;
+          border-radius: 8px;
+          font-size: 0.74rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.35rem;
+          transition: all 0.2s;
+        }
+
+        .db-preview-action-btn.primary {
+          background: #7d2ae8;
+          color: white;
+          border: none;
+        }
+
+        .db-preview-action-btn.primary:hover {
+          opacity: 0.92;
+        }
+
+        .db-preview-action-btn.primary:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .db-preview-action-btn.secondary {
+          background: var(--btn-secondary-bg);
+          color: var(--btn-secondary-text);
+          border: 1px solid var(--btn-secondary-border);
+        }
+
+        .db-preview-action-btn.secondary:hover {
+          background: var(--btn-secondary-hover);
+        }
+
+        /* ─── COMMON UTILITIES ─── */
+        .db-spin {
+          animation: db-spin-key 1s linear infinite;
+        }
+
+        @keyframes db-spin-key {
+          to { transform: rotate(360deg); }
+        }
+
+        .db-slider-loading-grid {
+          display: flex;
+          gap: 0.85rem;
+        }
+
+        .db-skeleton-card {
+          width: 140px;
+          height: 100px;
+          border-radius: 12px;
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          animation: dbPulse 1.5s ease-in-out infinite;
+        }
+
+        .db-skeleton-large-card {
+          height: 220px;
+          border-radius: 16px;
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          animation: dbPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes dbPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+
+        .db-grid-loading {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 1.25rem;
+        }
+
+        .db-no-results-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 3rem 0;
+          color: var(--text-muted);
+        }
+
+        .db-no-results-text {
+          font-size: 0.75rem;
+          margin: 0;
+        }
+
+        /* Responsive Layouts */
         @media (max-width: 900px) {
-          .db-welcome-right { display: none; }
-          .db-columns-layout { grid-template-columns: 1fr; }
-          .db-hub-tabs { overflow-x: auto; padding: 0 1rem; scrollbar-width: none; }
+          .db-main-container {
+            grid-template-columns: 1fr;
+          }
+          .db-content-right-sidebar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+          }
         }
-        @media (max-width: 600px) {
-          .db-tpl-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+
+        @media (max-width: 640px) {
+          .db-compact-hero {
+            padding: 1.25rem;
+          }
+          .db-hero-inner {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+          .db-hero-right {
+            width: 100%;
+          }
+          .db-credits-hero-card {
+            justify-content: center;
+          }
+          .db-large-templates-grid {
+            grid-template-columns: 1fr;
+          }
+          .db-preview-layout-grid {
+            grid-template-columns: 1fr;
+          }
         }
+        /* ─── CREDIT BUY MODAL ─── */
+        .dbc-overlay {
+          position: fixed; inset: 0; background: rgba(0,0,0,.75);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 2000; backdrop-filter: blur(8px);
+          animation: dbc-fade .18s ease;
+        }
+        @keyframes dbc-fade { from { opacity: 0; } }
+
+        .dbc-modal {
+          background: var(--card-bg); border: 1px solid var(--border);
+          border-radius: 22px; width: 520px; max-width: 95vw;
+          box-shadow: 0 40px 100px rgba(0,0,0,.55);
+          animation: dbc-in .2s ease;
+          overflow: hidden;
+        }
+        @keyframes dbc-in { from { opacity:0; transform: scale(.95) translateY(12px); } }
+
+        .dbc-modal-hd {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+          background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(139,92,246,.07));
+        }
+        .dbc-modal-hd-left { display: flex; align-items: center; gap: .85rem; }
+        .dbc-modal-icon {
+          width: 42px; height: 42px; border-radius: 12px;
+          background: var(--btn-cta-bg); display: flex; align-items: center;
+          justify-content: center; color: #fff;
+        }
+        .dbc-modal-title { font-size: 1rem; font-weight: 700; margin: 0; }
+        .dbc-modal-sub { font-size: .75rem; color: var(--text-muted); margin: 0; }
+        .dbc-close-btn {
+          background: var(--sidebar-bg); border: 1px solid var(--border);
+          border-radius: 10px; width: 34px; height: 34px; display: flex;
+          align-items: center; justify-content: center; cursor: pointer;
+          color: var(--text-muted); transition: all .15s;
+        }
+        .dbc-close-btn:hover { background: var(--border); color: var(--text); }
+
+        .dbc-modal-body { padding: 1.5rem; }
+
+        .dbc-pack-prompt { font-size: .85rem; color: var(--text-muted); margin: 0 0 1rem; }
+        .dbc-packs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        @media (max-width: 480px) { .dbc-packs-grid { grid-template-columns: 1fr; } }
+
+        .dbc-pack-card {
+          background: var(--sidebar-bg); border: 2px solid var(--border);
+          border-radius: 16px; padding: 1.1rem; display: flex; flex-direction: column;
+          align-items: center; gap: .45rem; text-align: center; cursor: pointer;
+          transition: all .2s; position: relative; color: var(--text);
+        }
+        .dbc-pack-card:hover:not(:disabled) {
+          border-color: var(--accent); background: rgba(99,102,241,.06);
+          transform: translateY(-2px); box-shadow: 0 6px 24px rgba(99,102,241,.15);
+        }
+        .dbc-pack-card:disabled { opacity: .65; cursor: not-allowed; }
+        .dbc-pack-loading { border-color: var(--accent) !important; }
+
+        .dbc-pack-badge {
+          position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+          background: #f59e0b; color: #fff; font-size: .6rem; font-weight: 700;
+          padding: .18rem .6rem; border-radius: 999px; white-space: nowrap;
+        }
+        .dbc-pack-icon {
+          width: 44px; height: 44px; border-radius: 12px;
+          background: var(--btn-cta-bg); display: flex; align-items: center;
+          justify-content: center; color: #fff; margin-top: .35rem;
+        }
+        .dbc-pack-name { font-size: .82rem; font-weight: 700; margin: 0; }
+        .dbc-pack-credits { font-size: .72rem; color: var(--text-muted); }
+        .dbc-pack-price { font-size: 1.3rem; font-weight: 800; }
+        .dbc-pack-cur { font-size: .7rem; font-weight: 600; color: var(--text-muted); }
+        .dbc-pack-cta {
+          margin-top: .35rem; background: var(--btn-cta-bg); color: var(--btn-cta-text);
+          padding: .38rem .9rem; border-radius: 10px; font-size: .75rem;
+          font-weight: 700; width: 100%; text-align: center;
+        }
+        .dbc-pack-spinner {
+          display: flex; align-items: center; gap: .35rem;
+          font-size: .75rem; color: var(--accent); margin-top: .35rem;
+        }
+
+        .dbc-pack-summary {
+          display: flex; align-items: center; gap: .6rem;
+          background: var(--sidebar-bg); border: 1px solid var(--border);
+          border-radius: 12px; padding: .75rem 1rem;
+          margin-bottom: 1.25rem; font-size: .875rem; color: var(--text-muted);
+        }
+        .dbc-pack-summary svg { color: var(--accent); flex-shrink: 0; }
+
+        .dbc-pack-note {
+          display: flex; align-items: center; gap: .4rem;
+          font-size: .72rem; color: var(--text-muted); margin: 1rem 0 0;
+          justify-content: center;
+        }
+
+        /* Stripe card form inside modal */
+        .dbc-card-form { display: flex; flex-direction: column; gap: 1rem; }
+        .dbc-field { display: flex; flex-direction: column; gap: .4rem; }
+        .dbc-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
+        .dbc-stripe-el { background: var(--sidebar-bg); border: 1px solid var(--border); border-radius: 10px; padding: .75rem 1rem; }
+        .dbc-stripe-el:focus-within { border-color: var(--accent); }
+        .dbc-field-err { font-size: .75rem; color: #ef4444; margin: 0; }
+        .dbc-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .dbc-form-footer { display: flex; align-items: center; justify-content: space-between; padding-top: .5rem; }
+        .dbc-secure { display: flex; align-items: center; gap: .4rem; font-size: .75rem; color: var(--text-muted); }
+        .dbc-form-actions { display: flex; gap: .75rem; }
+        .dbc-btn-primary {
+          display: inline-flex; align-items: center; gap: .5rem;
+          background: var(--btn-cta-bg); color: var(--btn-cta-text);
+          border: none; padding: .6rem 1.25rem; border-radius: 12px;
+          font-size: .875rem; font-weight: 600; cursor: pointer; transition: all .2s;
+        }
+        .dbc-btn-primary:hover { background: var(--btn-cta-hover); }
+        .dbc-btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+        .dbc-btn-ghost {
+          background: transparent; border: 1px solid var(--border);
+          color: var(--text); padding: .6rem 1.25rem; border-radius: 12px;
+          font-size: .875rem; cursor: pointer; transition: all .15s;
+        }
+        .dbc-btn-ghost:hover { background: var(--sidebar-bg); }
       `}</style>
+
+      {/* Credit Buy Modal */}
+      {showCreditModal && (
+        <CreditBuyModal
+          onClose={() => setShowCreditModal(false)}
+          onSuccess={() => { loadCredits(); }}
+        />
+      )}
+
     </div>
   );
 }
