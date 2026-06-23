@@ -106,6 +106,7 @@ export default function ScreensPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState<Screen | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // ── Load plan status ──
   useEffect(() => {
@@ -231,8 +232,13 @@ export default function ScreensPage() {
   }
 
   // ── Bulk delete ──
-  async function bulkDelete() {
-    if (!confirm(`${t('SCREENS.delete_title')} (${selectedIds.size})?`)) return;
+  function bulkDelete() {
+    if (selectedIds.size === 0) return;
+    setShowBulkDelete(true);
+  }
+
+  async function executeBulkDelete() {
+    setActionLoading(true);
     try {
       const { data } = await cmsApi.delete('/sc/screen/', { data: { screenIds: Array.from(selectedIds) } });
       let successCount = 0;
@@ -255,9 +261,12 @@ export default function ScreensPage() {
         toast.success(`${successCount} screens deleted`);
       }
       setSelectedIds(new Set());
+      setShowBulkDelete(false);
       fetchScreens(pagination.page);
     } catch {
       toast.error(t('SCREENS.bulk_delete_failed'));
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -433,6 +442,22 @@ export default function ScreensPage() {
           loading={actionLoading}
           t={t}
         />
+      )}
+
+      {/* Bulk Delete modal */}
+      {showBulkDelete && (
+        <div className="modal-overlay" onClick={() => setShowBulkDelete(false)}>
+          <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <h3>{t('SCREENS.delete_title')}</h3>
+            <p>{t('SCREENS.delete_msg')} "<strong>{selectedIds.size} screens</strong>"?</p>
+            <div className="confirm-footer">
+              <button className="btn-ghost" onClick={() => setShowBulkDelete(false)}>{t('SCREENS.cancel')}</button>
+              <button className="btn-danger" onClick={executeBulkDelete} disabled={actionLoading} id="confirm-bulk-delete-screens">
+                {actionLoading && <RefreshCw size={13} className="spin" />} {t('SCREENS.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`

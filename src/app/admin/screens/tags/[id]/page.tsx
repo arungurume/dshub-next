@@ -165,6 +165,7 @@ export default function ScreenTagDetailPage() {
                 }}
                 disabled={assigning}
                 options={schedules.map(s => ({ value: s.id, label: s.name }))}
+                searchable={true}
               />
             </div>
           </div>

@@ -8,7 +8,7 @@ import {
   BookmarkCheck, FileText, Sparkles, ImageIcon,
   Search, X, Link2, Link2Off, RefreshCw, User
 } from 'lucide-react';
-import { cmsApi } from '@/lib/api';
+import { cmsApi, tmsApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { Suspense } from 'react';
 
@@ -18,13 +18,16 @@ interface Template {
   id: number | string;
   templateName?: string;
   name?: string;
+  title?: string;
   featuredImage?: string;
   fullImage?: string;
   thumbLink?: string;
   editUrl?: string;
+  templateUrl?: string;
   isVertical?: boolean;
   type?: string;
   size?: string;
+  images?: { id?: number; url: string }[];
 }
 
 interface CanvaDesign {
@@ -44,11 +47,13 @@ interface TagSection {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function templateImg(t: Template): string {
+  // CMS templates: images[] is the primary source
+  if (t.images && t.images.length > 0 && t.images[0].url) return t.images[0].url;
   return t.fullImage || t.featuredImage || t.thumbLink || '';
 }
 
 function templateName(t: Template): string {
-  return t.templateName || t.name || 'Untitled';
+  return t.templateName || t.name || t.title || 'Untitled';
 }
 
 // ─── Template Card ────────────────────────────────────────────────────────────
@@ -269,8 +274,13 @@ function TemplatesPageInner() {
   const [myLoading, setMyLoading] = useState(true);
 
   // ── DSHub Canvas state ─────────────────────────────────────────────────────
-  const [tagSections, setTagSections] = useState<TagSection[]>([]);
-  const [activeTag, setActiveTag] = useState<string>('');
+  const [dshubTemplates, setDshubTemplates] = useState<Template[]>([]);
+  const [dshubLoading, setDshubLoading] = useState(false);
+  const [dshubPage, setDshubPage] = useState(0);
+  const [dshubHasMore, setDshubHasMore] = useState(true);
+  const [dshubLoadingMore, setDshubLoadingMore] = useState(false);
+  // kept for backwards-compat, unused now
+  const [tagSections] = useState<TagSection[]>([]);
 
   const [search, setSearch] = useState('');
   const topRef = useRef<HTMLDivElement>(null);
@@ -359,55 +369,46 @@ function TemplatesPageInner() {
     if (mainTab !== 'saved') return;
     setMyLoading(true);
     Promise.all([
-      cmsApi.get('/tc/my-template/org').catch(() => ({ data: [] })),
-      cmsApi.get('/tc/my-draft-template/org').catch(() => ({ data: [] })),
+      tmsApi.get('/tc/my-template/org').catch(() => ({ data: [] })),
+      tmsApi.get('/tc/my-draft-template/org').catch(() => ({ data: [] })),
     ]).then(([saved, draft]) => {
       setMyTemplates(Array.isArray(saved.data) ? saved.data : []);
       setMyDrafts(Array.isArray(draft.data) ? draft.data : []);
     }).finally(() => setMyLoading(false));
   }, [mainTab]);
 
-  // ── DSHub Canvas tags ──────────────────────────────────────────────────────
+  // ── DSHub Canvas templates from CMS ───────────────────────────────────────
+  const loadDshubTemplates = useCallback(async (page = 0) => {
+    if (page === 0) setDshubLoading(true);
+    else setDshubLoadingMore(true);
+    try {
+      const { data } = await cmsApi.get('/ctc/templates', { params: { page, size: 24 } });
+      const items: Template[] = data?.content || (Array.isArray(data) ? data : []);
+      const totalPages: number = data?.totalPages ?? 1;
+      if (page === 0) {
+        setDshubTemplates(items);
+      } else {
+        setDshubTemplates((prev) => [...prev, ...items]);
+      }
+      setDshubPage(page);
+      setDshubHasMore(page + 1 < totalPages);
+    } catch {
+      toast.error('Failed to load DSHub templates');
+    } finally {
+      setDshubLoading(false);
+      setDshubLoadingMore(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (mainTab !== 'dshub') return;
-    if (tagSections.length > 0) return;
-
-    cmsApi.get('/tc/template/tags').then(({ data }) => {
-      const tags: any[] = Array.isArray(data) ? data : [];
-      const sections: TagSection[] = tags.map((tag: any) => ({
-        name: tag.name, slug: tag.slug || tag.name, templates: [], loading: true,
-      }));
-      setTagSections(sections);
-      if (sections.length > 0) setActiveTag(sections[0].name);
-
-      sections.forEach((sec, idx) => {
-        cmsApi.get(`/tc/template/tags/${encodeURIComponent(sec.slug)}?page=0&size=20`)
-          .then(({ data: res }) => {
-            const tpls: Template[] = Array.isArray(res) ? res : (res?.content || []);
-            setTagSections((prev) => {
-              const next = [...prev];
-              next[idx] = { ...next[idx], templates: tpls, loading: false };
-              return next;
-            });
-          })
-          .catch(() => {
-            setTagSections((prev) => {
-              const next = [...prev];
-              next[idx] = { ...next[idx], loading: false };
-              return next;
-            });
-          });
-      });
-    }).catch(() => {});
-  }, [mainTab, tagSections.length]);
+    if (dshubTemplates.length > 0) return;
+    loadDshubTemplates(0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mainTab]);
 
   const openTemplate = (template: Template) => {
     if (template.id) router.push(`/admin/templates/${template.id}`);
-  };
-
-  const scrollToTag = (tagName: string) => {
-    setActiveTag(tagName);
-    document.getElementById(`tag-${tagName}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const filteredSaved = (myTab === 'saved' ? myTemplates : myDrafts).filter(
@@ -513,27 +514,7 @@ function TemplatesPageInner() {
           </div>
         )}
 
-        {/* DSHub Canvas tag chips */}
-        {mainTab === 'dshub' && tagSections.length > 0 && (
-          <div style={{ display: 'flex', gap: 8, paddingBottom: 12, paddingTop: 10, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            {tagSections.map((sec) => (
-              <button
-                key={sec.name}
-                onClick={() => scrollToTag(sec.name)}
-                style={{
-                  flexShrink: 0, padding: '5px 14px', borderRadius: 20,
-                  border: `1px solid ${activeTag === sec.name ? 'var(--accent)' : 'var(--border)'}`,
-                  background: activeTag === sec.name ? 'var(--accent)' : 'transparent',
-                  color: activeTag === sec.name ? '#fff' : 'var(--text-muted)',
-                  fontSize: '0.73rem', fontWeight: 600, cursor: 'pointer',
-                  transition: 'all 0.15s', whiteSpace: 'nowrap',
-                }}
-              >
-                {sec.name}
-              </button>
-            ))}
-          </div>
-        )}
+
 
         {/* Canva tab header actions */}
         {mainTab === 'canva' && canvaConnected && (
@@ -693,7 +674,7 @@ function TemplatesPageInner() {
 
         {/* DSHUB CANVAS */}
         {mainTab === 'dshub' && (
-          tagSections.length === 0 ? (
+          dshubLoading ? (
             <div style={{ columns: 'auto 220px', columnGap: 14 }}>
               {Array.from({ length: 12 }).map((_, i) => (
                 <div key={i} style={{
@@ -703,14 +684,47 @@ function TemplatesPageInner() {
                 }} />
               ))}
             </div>
+          ) : dshubTemplates.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 24px', color: 'var(--text-muted)' }}>
+              <Sparkles size={48} style={{ opacity: 0.2, marginBottom: 12 }} />
+              <p style={{ fontSize: '0.9rem', margin: 0 }}>No DSHub templates available yet.</p>
+              <button
+                onClick={() => loadDshubTemplates(0)}
+                style={{ marginTop: 12, padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+              >
+                <RefreshCw size={13} /> Retry
+              </button>
+            </div>
           ) : (
-            tagSections.map((sec) => (
-              <div key={sec.name} id={`tag-${sec.name}`}>
-                <TagRow section={sec} onView={openTemplate} />
+            <>
+              <div style={{ columns: 'auto 220px', columnGap: 14 }}>
+                {dshubTemplates
+                  .filter((tpl) => !search || templateName(tpl).toLowerCase().includes(search.toLowerCase()))
+                  .map((tpl) => (
+                    <TemplateCard key={tpl.id} template={tpl} onView={openTemplate} />
+                  ))}
               </div>
-            ))
+              {dshubHasMore && (
+                <div style={{ textAlign: 'center', marginTop: 24 }}>
+                  <button
+                    onClick={() => loadDshubTemplates(dshubPage + 1)}
+                    disabled={dshubLoadingMore}
+                    style={{
+                      padding: '9px 28px', borderRadius: 10, border: '1px solid var(--border)',
+                      background: 'var(--card-bg)', color: 'var(--text)', cursor: dshubLoadingMore ? 'not-allowed' : 'pointer',
+                      fontSize: '0.82rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6,
+                      opacity: dshubLoadingMore ? 0.6 : 1,
+                    }}
+                  >
+                    {dshubLoadingMore ? <RefreshCw size={13} className="spin" /> : <Plus size={13} />}
+                    {dshubLoadingMore ? 'Loading…' : 'Load More'}
+                  </button>
+                </div>
+              )}
+            </>
           )
         )}
+
       </div>
 
       <style>{`

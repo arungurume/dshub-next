@@ -226,9 +226,45 @@ export default function CanvaDesignDetailPage() {
 
   if (loading) {
     return (
-      <div className="design-loading">
-        <RefreshCw className="spin" size={24} />
-        <span>Loading Canva design details…</span>
+      <div className="canva-detail-page">
+        {/* Skeleton Header */}
+        <div className="detail-header">
+          <div style={{ width: 60, height: 20, borderRadius: 6, background: 'var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />
+        </div>
+
+        {/* Skeleton Grid */}
+        <div className="detail-grid">
+          {/* Left: image skeleton */}
+          <div style={{ width: '100%', aspectRatio: '4/3', maxHeight: '72vh', borderRadius: 8, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />
+
+          {/* Right: info skeleton */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '0.25rem' }}>
+            {/* Title */}
+            <div style={{ width: '75%', height: 32, borderRadius: 6, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />
+            {/* Subtitle */}
+            <div style={{ width: '45%', height: 16, borderRadius: 4, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.1s' }} />
+            {/* Button */}
+            <div style={{ width: 140, height: 40, borderRadius: 8, background: 'var(--card-bg)', border: '1px solid var(--border)', marginTop: '0.5rem', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.15s' }} />
+            {/* Meta rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+              {[0.2, 0.25, 0.3].map((delay, i) => (
+                <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <div style={{ width: 80, height: 12, borderRadius: 4, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: `skeleton-pulse 1.4s ease-in-out ${delay}s infinite` }} />
+                  <div style={{ width: 120, height: 12, borderRadius: 4, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: `skeleton-pulse 1.4s ease-in-out ${delay}s infinite` }} />
+                </div>
+              ))}
+            </div>
+            {/* Action card skeleton */}
+            <div style={{ width: '100%', height: 80, borderRadius: 12, background: 'var(--card-bg)', border: '1px solid var(--border)', marginTop: '1rem', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.35s' }} />
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes skeleton-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+          }
+        `}</style>
       </div>
     );
   }

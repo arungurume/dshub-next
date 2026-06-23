@@ -373,6 +373,7 @@ function WeekCalendar({
 
   // Popup
   const [popup, setPopup] = useState<{ startDT: string; endDT: string; initialItem?: ScheduleItem } | null>(null);
+  const [deleteItemModal, setDeleteItemModal] = useState<ScheduleItem | null>(null);
 
   const rangeLabel = `${weekDays[0].dayNumber} ${weekDays[0].monthName} — ${weekDays[6].dayNumber} ${weekDays[6].monthName} ${weekDays[6].date.getFullYear()}`;
 
@@ -448,8 +449,7 @@ function WeekCalendar({
     });
   }
 
-  async function onDeleteItem(item: ScheduleItem) {
-    if (!window.confirm(`Are you sure you want to delete "${item.name}" from this schedule?`)) return;
+  async function executeDeleteItem(item: ScheduleItem) {
     try {
       const { data } = await cmsApiV2.delete(`/scc/schedule-asset/${item.id}`);
       if (data && typeof data === 'object') {
@@ -465,6 +465,8 @@ function WeekCalendar({
       }
     } catch {
       toast.error('Failed to delete event');
+    } finally {
+      setDeleteItemModal(null);
     }
   }
 
@@ -562,7 +564,7 @@ function WeekCalendar({
                           </button>
                           <button
                             className="cal-item-btn"
-                            onClick={(e) => { e.stopPropagation(); onDeleteItem(item); }}
+                            onClick={(e) => { e.stopPropagation(); setDeleteItemModal(item); }}
                             title="Delete"
                           >
                             <Trash2 size={10} />
@@ -588,6 +590,27 @@ function WeekCalendar({
           onClose={() => setPopup(null)}
           onSaved={onItemSaved}
         />
+      )}
+
+      {/* Delete Item modal */}
+      {deleteItemModal && (
+        <div className="modal-overlay" onClick={() => setDeleteItemModal(null)}>
+          <div className="small-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-hd">
+              <h3>Delete Event from Schedule</h3>
+              <button onClick={() => setDeleteItemModal(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-bd">
+              <p className="confirm-text" style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Are you sure you want to delete "<strong>{deleteItemModal.name}</strong>" from this schedule?</p>
+            </div>
+            <div className="modal-ft">
+              <button className="btn-ghost" onClick={() => setDeleteItemModal(null)}>Cancel</button>
+              <button className="btn-danger" onClick={() => executeDeleteItem(deleteItemModal)} id="confirm-delete-event">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -789,6 +812,7 @@ export default function SchedulesPage() {
   const [renameModal, setRenameModal] = useState<Schedule | null>(null);
   const [usageModal, setUsageModal] = useState<Schedule | null>(null);
   const [deleteModal, setDeleteModal] = useState<Schedule | null>(null);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
 
   // Load dropdowns
   useEffect(() => {
@@ -928,9 +952,12 @@ export default function SchedulesPage() {
     }
   }
 
-  async function bulkDelete() {
+  function bulkDelete() {
     if (selectedIds.size === 0) return;
-    if (!confirm(`Are you sure you want to delete the ${selectedIds.size} selected schedules? This cannot be undone.`)) return;
+    setShowBulkDelete(true);
+  }
+
+  async function executeBulkDelete() {
     setActionLoading(true);
     try {
       const { data } = await cmsApiV2.delete('/scc/schedule/', { data: { ids: Array.from(selectedIds) } });
@@ -954,9 +981,10 @@ export default function SchedulesPage() {
         toast.success(`${successCount} schedules deleted`);
       }
       setSelectedIds(new Set());
-      fetchSchedules(0);
+      setShowBulkDelete(false);
+      fetchSchedules(pagination.page);
     } catch {
-      toast.error('Failed to delete selected schedules');
+      toast.error('Failed to delete schedules');
     } finally {
       setActionLoading(false);
     }
@@ -1092,6 +1120,7 @@ export default function SchedulesPage() {
               id="cal-schedule-select"
               placeholder="— Select a schedule —"
               options={schedules.map(s => ({ value: s.id, label: s.name }))}
+              searchable={true}
             />
           )}
 
@@ -1574,6 +1603,27 @@ export default function SchedulesPage() {
           onClose={() => setDeleteModal(null)}
           loading={actionLoading}
         />
+      )}
+
+      {/* Bulk Delete Schedules modal */}
+      {showBulkDelete && (
+        <div className="modal-overlay" onClick={() => setShowBulkDelete(false)}>
+          <div className="small-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-hd">
+              <h3>Delete Selected Schedules</h3>
+              <button onClick={() => setShowBulkDelete(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-bd">
+              <p className="confirm-text" style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Are you sure you want to delete the <strong>{selectedIds.size}</strong> selected schedules? This cannot be undone.</p>
+            </div>
+            <div className="modal-ft">
+              <button className="btn-ghost" onClick={() => setShowBulkDelete(false)}>Cancel</button>
+              <button className="btn-danger" onClick={executeBulkDelete} disabled={actionLoading} id="confirm-bulk-delete-schedules">
+                {actionLoading && <RefreshCw size={13} className="spin" />} Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style>{`

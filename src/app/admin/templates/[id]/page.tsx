@@ -206,9 +206,45 @@ export default function DsTemplateDetailPage() {
 
   if (loading) {
     return (
-      <div className="template-loading">
-        <RefreshCw className="spin" size={24} />
-        <span>Loading template details…</span>
+      <div className="tpl-detail-page">
+        {/* Skeleton Header */}
+        <div className="detail-header">
+          <div style={{ width: 80, height: 20, borderRadius: 6, background: 'var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />
+          <div style={{ width: 160, height: 34, borderRadius: 40, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.1s' }} />
+        </div>
+
+        {/* Skeleton Grid */}
+        <div className="detail-grid">
+          {/* Left: gallery skeleton */}
+          <div className="gallery-section">
+            <div style={{ flex: 1, aspectRatio: '4/3', borderRadius: 8, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite' }} />
+          </div>
+
+          {/* Right: info skeleton */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+            {/* Title */}
+            <div style={{ width: '80%', height: 36, borderRadius: 6, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.1s' }} />
+            {/* Subtitle */}
+            <div style={{ width: '40%', height: 14, borderRadius: 4, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.15s' }} />
+            {/* Price box */}
+            <div style={{ width: '100%', height: 70, borderRadius: 8, background: 'var(--card-bg)', border: '1px solid var(--border)', marginTop: '0.25rem', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.2s' }} />
+            {/* Unlock button */}
+            <div style={{ width: '100%', height: 48, borderRadius: 10, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: 'skeleton-pulse 1.4s ease-in-out infinite 0.25s' }} />
+            {/* Description lines */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '0.5rem' }}>
+              {[0.3, 0.35, 0.4, 0.45].map((delay, i) => (
+                <div key={i} style={{ width: i % 2 === 0 ? '90%' : '70%', height: 12, borderRadius: 4, background: 'var(--card-bg)', border: '1px solid var(--border)', animation: `skeleton-pulse 1.4s ease-in-out ${delay}s infinite` }} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes skeleton-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -284,7 +320,7 @@ export default function DsTemplateDetailPage() {
 
         {/* Right Column: Info details */}
         <div className="info-section">
-          <div className="info-card">
+          <div className="info-content-wrapper">
             <h1 className="template-title">{template?.templateName}</h1>
             <span className="template-type">DS Canva template</span>
 
@@ -502,18 +538,20 @@ export default function DsTemplateDetailPage() {
 
       <style>{`
         .tpl-detail-page {
-          padding: 1.5rem 2rem;
-          max-width: 1200px;
+          padding: 2.5rem 3rem;
+          max-width: 1400px;
           margin: 0 auto;
+          animation: fadeIn 0.4s ease-out;
         }
         .template-loading {
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          gap: 1rem;
-          padding: 6rem;
+          gap: 1.25rem;
+          padding: 8rem;
           color: var(--text-muted);
+          font-weight: 500;
         }
         .spin {
           animation: spin 1s linear infinite;
@@ -521,30 +559,33 @@ export default function DsTemplateDetailPage() {
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
 
         /* Header */
         .detail-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
         }
         .back-btn {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          padding: 0.5rem 1rem;
-          border-radius: 10px;
-          color: var(--text-muted);
-          font-size: 0.82rem;
-          font-weight: 600;
+          gap: 0.35rem;
+          background: transparent;
+          border: none;
+          padding: 0;
+          color: var(--text);
+          font-size: 0.95rem;
+          font-weight: 500;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: color 0.2s ease;
+          box-shadow: none;
         }
         .back-btn:hover {
-          border-color: var(--accent);
           color: var(--accent);
         }
         .credits-badge {
@@ -588,15 +629,17 @@ export default function DsTemplateDetailPage() {
         /* Layout Grid */
         .detail-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 2.5rem;
+          grid-template-columns: 1.25fr 0.75fr;
+          gap: 4rem;
           align-items: start;
+          margin-top: 1rem;
         }
 
         /* Gallery */
         .gallery-section {
           display: flex;
           gap: 1rem;
+          width: 100%;
         }
         .thumb-col {
           display: flex;
@@ -628,21 +671,22 @@ export default function DsTemplateDetailPage() {
         .preview-container {
           position: relative;
           flex: 1;
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          border-radius: 18px;
-          overflow: hidden;
-          aspect-ratio: 4 / 3;
+          background: transparent;
+          border: none;
+          border-radius: 0;
+          overflow: visible;
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           justify-content: center;
           cursor: zoom-in;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.05);
         }
         .main-preview-img {
-          width: 100%;
-          height: 100%;
+          width: auto;
+          max-width: 100%;
+          max-height: 82vh;
           object-fit: contain;
+          border-radius: 4px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
         }
         .nav-arrow {
           position: absolute;
@@ -684,25 +728,25 @@ export default function DsTemplateDetailPage() {
         }
 
         /* Info Section */
-        .info-card {
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          border-radius: 18px;
-          padding: 2rem;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+        .info-content-wrapper {
+          background: transparent;
+          border: none;
+          padding: 0;
+          box-shadow: none;
         }
         .template-title {
-          font-size: 1.5rem;
-          font-weight: 800;
-          margin: 0 0 0.35rem;
+          font-size: 1.85rem;
+          font-weight: 700;
+          margin: 0 0 0.25rem;
           line-height: 1.25;
+          color: var(--text);
         }
         .template-type {
-          font-size: 0.78rem;
+          font-size: 0.85rem;
           color: var(--text-muted);
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+          font-weight: 400;
+          text-transform: none;
+          letter-spacing: normal;
         }
         .price-box {
           display: flex;
@@ -710,8 +754,8 @@ export default function DsTemplateDetailPage() {
           justify-content: space-between;
           border-top: 1px solid var(--border);
           border-bottom: 1px solid var(--border);
-          padding: 1.25rem 0;
-          margin: 1.5rem 0;
+          padding: 1.5rem 0;
+          margin: 1.75rem 0;
         }
         .cash-price {
           display: flex;
@@ -751,22 +795,27 @@ export default function DsTemplateDetailPage() {
         }
         .btn-unlock-action {
           width: 100%;
-          background: var(--btn-cta-bg);
-          color: var(--btn-cta-text);
+          background: #7D2AE8;
+          color: #fff;
           border: none;
           padding: 0.85rem;
-          border-radius: 12px;
+          border-radius: 10px;
           font-size: 0.92rem;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.15s;
-          box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(125, 42, 232, 0.15);
           display: flex;
           align-items: center;
           justify-content: center;
         }
         .btn-unlock-action:hover {
-          background: var(--btn-cta-hover);
+          background: #6a21cb;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.25);
+        }
+        .btn-unlock-action:active {
+          transform: translateY(0);
         }
         .btn-unlock-action.secondary {
           background: var(--btn-secondary-bg);
@@ -803,12 +852,12 @@ export default function DsTemplateDetailPage() {
 
         /* Overview & Highlights */
         .overview-container h3, .features-container h3 {
-          font-size: 0.9rem;
+          font-size: 0.82rem;
           font-weight: 700;
-          color: var(--text);
+          color: var(--text-muted);
           text-transform: uppercase;
-          letter-spacing: 0.06em;
-          margin: 0 0 0.5rem;
+          letter-spacing: 0.07em;
+          margin: 0 0 0.6rem;
         }
         .overview-container p {
           font-size: 0.875rem;
@@ -1143,11 +1192,12 @@ export default function DsTemplateDetailPage() {
           line-height: 1.4;
         }
 
-        @media (max-width: 900px) {
-          .detail-grid { grid-template-columns: 1fr; }
+        @media (max-width: 1024px) {
+          .detail-grid { grid-template-columns: 1fr; gap: 2.5rem; }
           .similar-grid { grid-template-columns: repeat(3, 1fr); }
         }
-        @media (max-width: 600px) {
+        @media (max-width: 640px) {
+          .tpl-detail-page { padding: 1.5rem 1.5rem; }
           .gallery-section { flex-direction: column-reverse; }
           .thumb-col { flex-direction: row; }
           .similar-grid { grid-template-columns: repeat(2, 1fr); }

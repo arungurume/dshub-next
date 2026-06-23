@@ -61,7 +61,7 @@ function ContentTypeIcon({ type, size = 16 }: { type: string; size?: number }) {
     case 'IMAGE': return <ImageIcon size={size} />;
     case 'DOCUMENT': return <FileText size={size} />;
     case 'AUDIO': return <Music size={size} />;
-    case 'FOLDER': return <Folder size={size} />;
+    case 'FOLDER': return <Folder size={size} fill="currentColor" color="#000000" />;
     default: return <FileIcon size={size} />;
   }
 }
@@ -69,7 +69,7 @@ function ContentTypeIcon({ type, size = 16 }: { type: string; size?: number }) {
 function typeColor(type: string) {
   const map: Record<string, string> = {
     VIDEO: 'var(--accent)', IMAGE: '#22c55e', AUDIO: '#f59e0b',
-    DOCUMENT: '#3b82f6', FOLDER: '#a78bfa', TEMPLATE: '#ec4899',
+    DOCUMENT: '#3b82f6', FOLDER: '#000000', TEMPLATE: '#ec4899',
   };
   return map[type] || '#6b7280';
 }
@@ -348,7 +348,7 @@ function AddToFolderModal({ item, onClose, onSaved }: {
                     checked={selectedFolderId === f.id}
                     onChange={() => setSelectedFolderId(f.id)}
                   />
-                  <Folder size={15} />
+                  <Folder size={18} fill="currentColor" color="#000000" />
                   <span>{f.name}</span>
                 </label>
               ))}
@@ -832,7 +832,7 @@ export default function ContentManagerPage() {
               <button className="btn-secondary" onClick={() => setActiveFolder(null)} title="Back to Root">
                 <ChevronLeft size={16} /> Back
               </button>
-              <h2 className="folder-title"><Folder size={18} fill="currentColor" color="#fbbf24" /> {activeFolder.name}</h2>
+              <h2 className="folder-title"><Folder size={22} fill="currentColor" color="#000000" /> {activeFolder.name}</h2>
             </div>
           ) : (
             <div className="sort-toggle">
@@ -996,7 +996,7 @@ export default function ContentManagerPage() {
                     <img src={item.thumbLink} alt={item.originalName} className="thumb-img" />
                   ) : (
                     <div className="thumb-placeholder" style={{ color: typeColor(item.contentType) }}>
-                      <ContentTypeIcon type={item.contentType} size={item.contentType === 'FOLDER' ? 44 : 32} />
+                      <ContentTypeIcon type={item.contentType} size={item.contentType === 'FOLDER' ? 52 : 32} />
                     </div>
                   )}
                   {item.duration && (
@@ -1085,7 +1085,7 @@ export default function ContentManagerPage() {
                           {item.thumbLink
                             ? <img src={item.thumbLink} alt="" className="list-thumb-img" />
                             : <div className={item.contentType === 'FOLDER' ? 'folder-icon-list' : ''} style={{ color: typeColor(item.contentType) }}>
-                                <ContentTypeIcon type={item.contentType} size={18} />
+                                <ContentTypeIcon type={item.contentType} size={item.contentType === 'FOLDER' ? 22 : 18} />
                               </div>
                           }
                         </div>
