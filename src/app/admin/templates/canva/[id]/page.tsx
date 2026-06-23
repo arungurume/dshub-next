@@ -43,6 +43,8 @@ export default function CanvaDesignDetailPage() {
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState('');
   const [aspectRatio, setAspectRatio] = useState<'portrait' | 'landscape' | 'square'>('landscape');
+  const [isAlreadySaved, setIsAlreadySaved] = useState(false);
+  const [savedContentId, setSavedContentId] = useState<number | null>(null);
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
@@ -56,6 +58,23 @@ export default function CanvaDesignDetailPage() {
     }
   };
 
+  const checkSavedStatus = async (designTitle: string) => {
+    try {
+      const { data: contentRes } = await cmsApi.get('/cc/content', { params: { page: 0, size: 100 } });
+      const items = contentRes?.content || contentRes || [];
+      const matched = items.find((item: any) => item.name === designTitle);
+      if (matched) {
+        setIsAlreadySaved(true);
+        setSavedContentId(matched.id);
+      } else {
+        setIsAlreadySaved(false);
+        setSavedContentId(null);
+      }
+    } catch (err) {
+      console.error('Failed to check if template is saved:', err);
+    }
+  };
+
   const loadDesignDetails = useCallback(async () => {
     setLoading(true);
     try {
@@ -63,6 +82,10 @@ export default function CanvaDesignDetailPage() {
       const { data: res } = await cmsApi.get(`/canva/designs/${id}`);
       const designData = res?.design || res;
       setDesign(designData);
+
+      if (designData?.title) {
+        await checkSavedStatus(designData.title);
+      }
 
       // Fetch high-res export preview
       try {
@@ -180,8 +203,12 @@ export default function CanvaDesignDetailPage() {
   const finalizeExport = async (exportData: any) => {
     setExportProgress('Saving exported file to DSHub…');
     try {
-      await cmsApi.post('/cc/content/by-url', exportData);
+      const { data: savedContent } = await cmsApi.post('/cc/content/by-url', exportData);
       toast.success('Successfully imported design into File Manager!');
+      setIsAlreadySaved(true);
+      if (savedContent?.id) {
+        setSavedContentId(savedContent.id);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to save exported file to storage');
@@ -276,20 +303,37 @@ export default function CanvaDesignDetailPage() {
             {/* Actions Card: Save to File Manager */}
             <div className="actions-section">
               <h3>Use this design</h3>
-              <div className="action-card" onClick={handleSaveToFileManager}>
-                <div className="icon-box">
-                  <FolderOpen size={20} />
-                </div>
-                <div className="card-content">
-                  <div className="card-header-row">
-                    <span className="card-title">Save to File Manager</span>
-                    <span className="badge-rec">Recommended</span>
+              {isAlreadySaved ? (
+                <div className="action-card saved" onClick={() => router.push('/admin/content')}>
+                  <div className="icon-box saved">
+                    <Check size={20} />
                   </div>
-                  <p className="card-desc">
-                    Import this Canva design directly and save it as a high-resolution reusable asset in DSHub.
-                  </p>
+                  <div className="card-content">
+                    <div className="card-header-row">
+                      <span className="card-title">Saved to File Manager</span>
+                      <span className="badge-saved">In Library</span>
+                    </div>
+                    <p className="card-desc">
+                      This design is already in your library. Click to view and manage it in the File Manager.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="action-card" onClick={handleSaveToFileManager}>
+                  <div className="icon-box">
+                    <FolderOpen size={20} />
+                  </div>
+                  <div className="card-content">
+                    <div className="card-header-row">
+                      <span className="card-title">Save to File Manager</span>
+                      <span className="badge-rec">Recommended</span>
+                    </div>
+                    <p className="card-desc">
+                      Import this Canva design directly and save it as a high-resolution reusable asset in DSHub.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Folders Badge Section */}
@@ -578,6 +622,16 @@ export default function CanvaDesignDetailPage() {
           transform: translateY(-2px) scale(1.01);
           box-shadow: 0 8px 24px rgba(99, 102, 241, 0.06);
         }
+        .action-card.saved {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(34, 197, 94, 0.02) 100%);
+          border-style: solid;
+          border-color: rgba(34, 197, 94, 0.3);
+        }
+        .action-card.saved:hover {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(34, 197, 94, 0.04) 100%);
+          border-color: #22c55e;
+          box-shadow: 0 8px 24px rgba(34, 197, 94, 0.06);
+        }
         .icon-box {
           width: 48px;
           height: 48px;
@@ -588,6 +642,10 @@ export default function CanvaDesignDetailPage() {
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+        }
+        .icon-box.saved {
+          background: rgba(34, 197, 94, 0.1);
+          color: #22c55e;
         }
         .card-content {
           display: flex;
@@ -606,6 +664,16 @@ export default function CanvaDesignDetailPage() {
         }
         .badge-rec {
           background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+          color: #ffffff;
+          font-size: 0.6rem;
+          font-weight: 800;
+          padding: 0.2rem 0.5rem;
+          border-radius: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .badge-saved {
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
           color: #ffffff;
           font-size: 0.6rem;
           font-weight: 800;
