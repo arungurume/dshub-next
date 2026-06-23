@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local test files
+test-api.js
+test-delete-folder.js
+test-get-folder.js
+test-jackson.js
+test-upload.js
+test.jpg
