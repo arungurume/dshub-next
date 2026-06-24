@@ -113,7 +113,7 @@ export default function SignInPage() {
       setCurrentUser(user);
 
       toast.success('Successfully logged in with Google');
-      router.replace('/admin/dashboard');
+      router.replace('/dashboard');
     } catch (err: any) {
       console.error('Google Auth login error:', err);
       setLoginError(err.response?.data?.message || 'Google authentication failed');
@@ -142,7 +142,7 @@ export default function SignInPage() {
       setCurrentUser(user);
 
       toast.success('Logged in successfully');
-      router.replace('/admin/dashboard');
+      router.replace('/dashboard');
     } catch (err: any) {
       console.error('Local login error:', err);
       setLoginError(err.response?.data?.message || 'Invalid username or password');

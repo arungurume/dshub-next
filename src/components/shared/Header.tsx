@@ -108,7 +108,7 @@ export const Header: React.FC = () => {
         <Building2 size={16} className="text-muted-foreground" />
         {(!currentUser?.organization?.name || currentUser.organization.name === 'My Organization') ? (
           <button
-            onClick={() => router.push('/admin/my-account?tab=organization')}
+            onClick={() => router.push('/my-account?tab=organization')}
             className="flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-400 transition-colors bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md"
             title={t('DASHBOARD.click_to_update_org', 'Click to update organization details')}
           >
@@ -215,7 +215,7 @@ export const Header: React.FC = () => {
                 <p className="text-[10px] text-muted-foreground truncate mt-0.5">{currentUser?.email}</p>
               </div>
               <button
-                onClick={() => { setIsProfileMenuOpen(false); router.push('/admin/my-account'); }}
+                onClick={() => { setIsProfileMenuOpen(false); router.push('/my-account'); }}
                 className="w-full text-left px-4 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 flex items-center gap-2 transition-colors"
               >
                 <User size={12} />

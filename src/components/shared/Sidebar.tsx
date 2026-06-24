@@ -54,19 +54,19 @@ export const Sidebar: React.FC = () => {
   };
 
   const coreItems: SidebarItem[] = [
-    { name: t('MENUITEMS.SIDEBAR.dashboard'),    path: '/admin/dashboard', icon: <LayoutDashboard size={18} /> },
-    { name: t('MENUITEMS.SIDEBAR.content_mang'), path: '/admin/content',   icon: <FileVideo size={18} /> },
-    { name: t('MENUITEMS.SIDEBAR.playlists'),    path: '/admin/playlists', icon: <FolderHeart size={18} /> },
-    { name: t('MENUITEMS.SIDEBAR.scheduling'),   path: '/admin/schedules', icon: <CalendarRange size={18} /> },
-    { name: t('MENUITEMS.SIDEBAR.screens'),      path: '/admin/screens',   icon: <Monitor size={18} /> },
-    { name: t('MENUITEMS.SIDEBAR.templates'),    path: '/admin/templates', icon: <Palette size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.dashboard'),    path: '/dashboard', icon: <LayoutDashboard size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.content_mang'), path: '/content',   icon: <FileVideo size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.playlists'),    path: '/playlists', icon: <FolderHeart size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.scheduling'),   path: '/schedules', icon: <CalendarRange size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.screens'),      path: '/screens',   icon: <Monitor size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.templates'),    path: '/templates', icon: <Palette size={18} /> },
   ];
 
   const settingItems: SidebarItem[] = [
-    { name: t('MENUITEMS.SIDEBAR.myAccount'),  path: '/admin/my-account', icon: <User size={18} /> },
-    { name: t('MENUITEMS.SIDEBAR.users'),      path: '/admin/users',      icon: <Users size={18} />, action: 'INVITE_USER' },
-    { name: t('MENUITEMS.SIDEBAR.subscription'), path: '/admin/billing',  icon: <CreditCard size={18} /> },
-    { name: t('MENUITEMS.SIDEBAR.location'),   path: '/admin/locations',  icon: <MapPin size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.myAccount'),  path: '/my-account', icon: <User size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.users'),      path: '/users',      icon: <Users size={18} />, action: 'INVITE_USER' },
+    { name: t('MENUITEMS.SIDEBAR.subscription'), path: '/billing',  icon: <CreditCard size={18} /> },
+    { name: t('MENUITEMS.SIDEBAR.location'),   path: '/locations',  icon: <MapPin size={18} /> },
   ];
 
   // Use theme-aware classes
@@ -77,7 +77,7 @@ export const Sidebar: React.FC = () => {
 
     const isActive =
       pathname === item.path ||
-      (item.path !== '/admin/dashboard' && pathname.startsWith(item.path));
+      (item.path !== '/dashboard' && pathname.startsWith(item.path));
 
     return (
       <button
@@ -117,7 +117,7 @@ export const Sidebar: React.FC = () => {
               width={110}
               height={36}
               className="object-contain cursor-pointer"
-              onClick={() => handleNav('/admin/dashboard')}
+              onClick={() => handleNav('/dashboard')}
               priority
             />
           ) : (
@@ -127,7 +127,7 @@ export const Sidebar: React.FC = () => {
               width={32}
               height={32}
               className="object-contain mx-auto cursor-pointer"
-              onClick={() => handleNav('/admin/dashboard')}
+              onClick={() => handleNav('/dashboard')}
               priority
             />
           )}
