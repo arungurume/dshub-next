@@ -4,13 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslateContext';
 import { useDSStore } from '@/store/useDSStore';
-import { 
-  Palette, Grid, HelpCircle, Plus, ChevronDown, MapPin, 
-  FileVideo, FolderHeart, Calendar, Monitor, ChevronRight, 
-  Lightbulb, ArrowUpRight, Link2, Sparkles, Loader2, AlertCircle, Building2,
-  ShoppingBag, CheckCircle2, Link2Off, Star, Coins, ExternalLink, RefreshCw,
-  TrendingUp, Utensils, GraduationCap, CreditCard, Lock, Eye, ArrowRight, User, Search,
-  Zap, Check, ShieldCheck, X
+import {
+  Palette, Plus, ChevronDown, MapPin,
+  FileVideo, FolderHeart, Calendar, Monitor, ChevronRight,
+  Sparkles, Loader2, AlertCircle, Building2,
+  Star, Coins, ExternalLink, RefreshCw,
+  CreditCard, Lock, Eye, Search,
+  Zap, ShieldCheck, X
 } from 'lucide-react';
 import { cmsApi, cmsApiV2, umsApi, setCookie } from '@/lib/api';
 import { toast } from 'sonner';
@@ -82,7 +82,7 @@ interface CreditPack {
   badge?: string;
 }
 
-type CategoryTab = 'Trending' | 'Restaurant' | 'Cafe' | 'Retail' | 'School' | 'Seasonal';
+type CategoryTab = 'Trending' | 'Restaurant' | 'Cafe' | 'Fast Food' | 'Pizza' | 'Seasonal' | 'Recently Purchased';
 
 // ─── Stripe helpers ────────────────────────────────────────────────────────────
 const CREDIT_PACKS: CreditPack[] = [
@@ -483,22 +483,26 @@ export default function DashboardMainPage() {
   };
 
   const remainingCredits = credits ? credits.total - credits.used : 0;
+  const estimatedTemplates = Math.floor(remainingCredits / 10);
   const orgName = currentUser?.organization?.name || 'My Organization';
+  const isNewUser = !statsLoading && stats.screensOnline === 0 && stats.scheduledToday === 0 && stats.playlists === 0;
 
-  // Dynamic template classification & search logic
   const getFilteredTemplates = (catName: CategoryTab): DsTemplate[] => {
     if (!gallery || gallery.length === 0) return [];
-    
+
+    if (catName === 'Recently Purchased') {
+      return gallery.filter(t => purchasedIds.has(t.id));
+    }
+
     let filtered = [...gallery];
 
-    // Filter by Category Pill
     if (catName !== 'Trending') {
       const searchTerms: Record<string, string[]> = {
-        'Restaurant': ['restaurant', 'food', 'menu', 'dining', 'burger', 'pizza', 'kitchen', 'recipe', 'cook'],
-        'Cafe': ['cafe', 'coffee', 'bakery', 'tea', 'drink', 'beverage', 'cup', 'morning'],
-        'Retail': ['retail', 'sale', 'shop', 'store', 'fashion', 'discount', 'clothing', 'shoes', 'boutique', 'market', 'product', 'buy'],
-        'School': ['school', 'education', 'class', 'student', 'teacher', 'university', 'college', 'learn', 'board', 'academic', 'lesson'],
-        'Seasonal': ['seasonal', 'winter', 'summer', 'spring', 'autumn', 'christmas', 'holiday', 'halloween', 'easter', 'festive', 'october', 'july', 'party']
+        'Restaurant': ['restaurant', 'food', 'menu', 'dining', 'burger', 'kitchen', 'recipe', 'cook'],
+        'Cafe': ['cafe', 'coffee', 'bakery', 'tea', 'drink', 'beverage', 'cup', 'morning', 'latte', 'espresso'],
+        'Fast Food': ['fast food', 'burger', 'fries', 'combo', 'meal', 'takeout', 'drive', 'qsr', 'quick'],
+        'Pizza': ['pizza', 'pizzeria', 'slice', 'pepperoni', 'margherita', 'topping', 'crust'],
+        'Seasonal': ['seasonal', 'winter', 'summer', 'spring', 'autumn', 'christmas', 'holiday', 'halloween', 'easter', 'festive', 'october', 'july', 'party', 'valentines', 'thanksgiving']
       };
 
       const terms = searchTerms[catName] || [];
@@ -513,11 +517,10 @@ export default function DashboardMainPage() {
       });
     }
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(t => 
-        (t.title || '').toLowerCase().includes(q) || 
+      filtered = filtered.filter(t =>
+        (t.title || '').toLowerCase().includes(q) ||
         (t.description || '').toLowerCase().includes(q) ||
         (t.tags || '').toLowerCase().includes(q)
       );
@@ -526,7 +529,6 @@ export default function DashboardMainPage() {
     return filtered;
   };
 
-  // Get recommended templates (unpurchased) for the bottom row
   const getRecommendedTemplates = (): DsTemplate[] => {
     if (!gallery || gallery.length === 0) return [];
     return gallery.filter(t => !purchasedIds.has(t.id)).slice(0, 8);
@@ -546,76 +548,158 @@ export default function DashboardMainPage() {
 
   return (
     <div className="db-page">
-      
+
       {/* ─── MAIN DESKTOP GRID ─── */}
       <div className="db-main-container">
-        
-        {/* ─── LEFT PANEL: TEMPLATE HUB ─── */}
+
+        {/* ─── LEFT PANEL ─── */}
         <div className="db-content-left">
-          
-          {/* 1. COMPACT HERO SECTION */}
+
+          {/* 1. HERO SECTION */}
           <div className="db-compact-hero">
             <div className="db-hero-glass-shine" />
             <div className="db-hero-inner">
               <div className="db-hero-left">
-                <span className="db-hero-badge">Canva Marketplace</span>
+                <h1 className="db-hero-title">Create stunning digital signage in minutes.</h1>
                 <p className="db-hero-pitch">
-                  Browse premium digital signage Canva templates for restaurant menus, cafe boards, retail promotions, schools, and seasonal campaigns.
+                  Browse premium digital signage templates for restaurant menus, cafe boards, retail promotions, schools, and seasonal campaigns.
                 </p>
+                <div className="db-hero-credit-msg">
+                  <Coins size={14} />
+                  <span>You currently have <strong>{remainingCredits}</strong> Template Credits available.</span>
+                </div>
                 <div className="db-hero-ctas">
                   <button onClick={() => router.push('/admin/templates')} className="db-cta-primary">
                     <Sparkles size={14} />
                     <span>Browse Templates</span>
                   </button>
+                  <button onClick={() => setShowCreditModal(true)} className="db-cta-buy-credits">
+                    <Coins size={14} />
+                    <span>Buy Credits</span>
+                  </button>
                   <button onClick={() => router.push('/admin/playlists')} className="db-cta-secondary">
                     <FolderHeart size={14} />
                     <span>Create Playlist</span>
                   </button>
-                </div>
-              </div>
-              
-              <div className="db-hero-right">
-                <div className="db-credits-hero-card">
-                  <Coins className="db-credits-hero-icon" />
-                  <div className="db-credits-hero-details">
-                    <span className="db-credits-hero-lbl">Available Credits</span>
-                    <span className="db-credits-hero-val">{remainingCredits} Credits</span>
-                  </div>
+                  <button onClick={() => router.push('/admin/screens/new')} className="db-cta-screen">
+                    <Monitor size={14} />
+                    <span>Add Screen</span>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 2. TEMPLATE DISCOVERY SECTION */}
+          {/* QUICK STATS BAR */}
+          <div className="db-stats-bar">
+            <div className="db-stat-chip" onClick={() => router.push('/admin/screens')}>
+              <div className="db-stat-chip-icon green"><Monitor size={13} /></div>
+              <div className="db-stat-chip-info">
+                <span className="db-stat-chip-val">{statsLoading ? '–' : stats.screensOnline}</span>
+                <span className="db-stat-chip-lbl">Screens Online</span>
+              </div>
+            </div>
+            <div className="db-stat-chip" onClick={() => router.push('/admin/schedules')}>
+              <div className="db-stat-chip-icon purple"><Calendar size={13} /></div>
+              <div className="db-stat-chip-info">
+                <span className="db-stat-chip-val">{statsLoading ? '–' : stats.scheduledToday}</span>
+                <span className="db-stat-chip-lbl">Active Schedules</span>
+              </div>
+            </div>
+            <div className="db-stat-chip" onClick={() => router.push('/admin/playlists')}>
+              <div className="db-stat-chip-icon pink"><FolderHeart size={13} /></div>
+              <div className="db-stat-chip-info">
+                <span className="db-stat-chip-val">{statsLoading ? '–' : stats.playlists}</span>
+                <span className="db-stat-chip-lbl">Playlists</span>
+              </div>
+            </div>
+            <div className="db-stat-chip" onClick={() => router.push('/admin/content')}>
+              <div className="db-stat-chip-icon indigo"><FileVideo size={13} /></div>
+              <div className="db-stat-chip-info">
+                <span className="db-stat-chip-val">{statsLoading ? '–' : stats.files}</span>
+                <span className="db-stat-chip-lbl">Files Uploaded</span>
+              </div>
+            </div>
+          </div>
+
+          {/* NEW USER: GETTING STARTED */}
+          {isNewUser && (
+            <div className="db-getting-started">
+              <h3 className="db-getting-started-title">Getting Started</h3>
+              <p className="db-getting-started-sub">Set up your digital signage in four simple steps</p>
+              <div className="db-steps-grid">
+                <div className="db-step-card" onClick={() => router.push('/admin/content')}>
+                  <div className="db-step-num">1</div>
+                  <div className="db-step-info">
+                    <span className="db-step-name">Upload Content</span>
+                    <span className="db-step-desc">Add images, videos, and media files</span>
+                  </div>
+                  <ChevronRight size={14} className="db-step-arrow" />
+                </div>
+                <div className="db-step-card" onClick={() => router.push('/admin/playlists')}>
+                  <div className="db-step-num">2</div>
+                  <div className="db-step-info">
+                    <span className="db-step-name">Create Playlist</span>
+                    <span className="db-step-desc">Arrange content into display loops</span>
+                  </div>
+                  <ChevronRight size={14} className="db-step-arrow" />
+                </div>
+                <div className="db-step-card" onClick={() => router.push('/admin/screens')}>
+                  <div className="db-step-num">3</div>
+                  <div className="db-step-info">
+                    <span className="db-step-name">Add Screen</span>
+                    <span className="db-step-desc">Register and pair your display hardware</span>
+                  </div>
+                  <ChevronRight size={14} className="db-step-arrow" />
+                </div>
+                <div className="db-step-card" onClick={() => router.push('/admin/schedules')}>
+                  <div className="db-step-num">4</div>
+                  <div className="db-step-info">
+                    <span className="db-step-name">Schedule Content</span>
+                    <span className="db-step-desc">Set display hours and content rotation</span>
+                  </div>
+                  <ChevronRight size={14} className="db-step-arrow" />
+                </div>
+              </div>
+              <div className="db-getting-started-alt">
+                <span>Or start with a premium template</span>
+                <button onClick={() => router.push('/admin/templates')} className="db-alt-browse-btn">
+                  <Sparkles size={13} />
+                  <span>Browse Templates</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 2. TEMPLATE MARKETPLACE SECTION */}
           <div className="db-discovery-panel">
             <div className="db-discovery-header">
               <div>
-                <h2 className="db-discovery-title">Discover Templates</h2>
-                <p className="db-discovery-sub">Select a category or search our premium design layout collections</p>
+                <h2 className="db-discovery-title">Template Marketplace</h2>
+                <p className="db-discovery-sub">Browse, purchase, customize, and publish premium templates directly to your screens.</p>
               </div>
 
-              {/* Search Bar */}
               <div className="db-search-bar-wrapper">
                 <Search size={14} className="db-search-icon" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search templates..." 
+                  placeholder="Search templates..."
                   className="db-search-input-premium"
                 />
               </div>
             </div>
 
-            {/* Category pills nav */}
             <div className="db-category-pills">
               {([
                 'Trending',
                 'Restaurant',
                 'Cafe',
-                'Retail',
-                'School',
-                'Seasonal'
+                'Fast Food',
+                'Pizza',
+                'Seasonal',
+                'Recently Purchased'
               ] as CategoryTab[]).map((tab) => (
                 <button
                   key={tab}
@@ -627,10 +711,9 @@ export default function DashboardMainPage() {
               ))}
             </div>
 
-            {/* Large Template Grid */}
             {galleryLoading ? (
               <div className="db-grid-loading">
-                {Array.from({ length: 3 }).map((_, i) => (
+                {Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="db-skeleton-large-card" />
                 ))}
               </div>
@@ -644,15 +727,12 @@ export default function DashboardMainPage() {
                 {activeTemplates.map((tpl) => {
                   const owned = purchasedIds.has(tpl.id);
                   const cost = tpl.creditCost ?? 0;
-                  
-                  // Compute orientation parameters
                   const isVertical = tpl.width && tpl.height ? tpl.height > tpl.width : false;
                   const isSquare = tpl.width && tpl.height ? tpl.height === tpl.width : false;
                   const orientationLabel = isVertical ? 'Portrait' : (isSquare ? 'Square' : 'Landscape');
 
                   return (
                     <div key={tpl.id} className="db-large-template-card" onClick={() => setPreviewTemplate(tpl)}>
-                      {/* Light-gray fixed ratio preview block */}
                       <div className="db-card-preview-container">
                         {getThumb(tpl) ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -660,21 +740,18 @@ export default function DashboardMainPage() {
                         ) : (
                           <div className="db-card-preview-placeholder"><Palette size={32} opacity={0.15} /></div>
                         )}
-                        
-                        {/* Status Pills */}
+
                         <div className="db-card-top-left-badges">
                           <span className="db-badge-orientation">{orientationLabel}</span>
-                          <span className="db-badge-size">{tpl.width || 1920}x{tpl.height || 1080}</span>
                         </div>
-                        
+
                         <div className="db-card-top-right-badges">
                           <span className={`db-badge-credits ${owned ? 'owned' : (cost === 0 ? 'free' : 'cost')}`}>
-                            {owned ? 'Owned' : (cost === 0 ? 'Free' : `${cost} cr`)}
+                            {owned ? 'Owned' : (cost === 0 ? 'Free' : `${cost} Credits`)}
                           </span>
                         </div>
                       </div>
 
-                      {/* Card Bottom Details */}
                       <div className="db-card-details-row">
                         <div className="db-card-info-texts">
                           <h4 className="db-card-title-text">{tpl.title || 'Untitled Design'}</h4>
@@ -691,8 +768,8 @@ export default function DashboardMainPage() {
                             </button>
                           ) : (
                             <button className="db-btn-card-action buy" onClick={() => buyTemplate(tpl)} disabled={buyingId !== null}>
-                              {buyingId === tpl.id ? <Loader2 size={12} className="db-spin" /> : <ShoppingBag size={12} />}
-                              <span>Buy</span>
+                              {buyingId === tpl.id ? <Loader2 size={12} className="db-spin" /> : <Lock size={12} />}
+                              <span>Unlock Template</span>
                             </button>
                           )}
                         </div>
@@ -704,10 +781,10 @@ export default function DashboardMainPage() {
             )}
           </div>
 
-          {/* 3. RECOMMENDED TEMPLATES (Horizontal sliding catalog) */}
+          {/* 3. RECOMMENDED TEMPLATES */}
           <div className="db-discovery-panel">
             <h3 className="db-discovery-title-small">Recommended for You</h3>
-            
+
             {galleryLoading ? (
               <div className="db-slider-loading-grid">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -715,7 +792,7 @@ export default function DashboardMainPage() {
                 ))}
               </div>
             ) : recommendedTemplates.length === 0 ? (
-              <p className="db-empty-discovery">All templates unlocked! Good job.</p>
+              <p className="db-empty-discovery">All templates unlocked!</p>
             ) : (
               <div className="db-horizontal-recommended-row">
                 {recommendedTemplates.map((tpl) => {
@@ -746,76 +823,75 @@ export default function DashboardMainPage() {
             )}
           </div>
 
-          {/* 4. SIGNAGE OPERATIONS (Demoted, placed at the bottom) */}
-          <div className="db-operations-panel">
-            <h3 className="db-operations-title">Signage Operations</h3>
-            <div className="db-operations-grid">
-              
-              <div className="db-ops-card" onClick={() => router.push('/admin/content')}>
-                <div className="db-ops-icon purple"><FileVideo size={16} /></div>
-                <div className="db-ops-texts">
-                  <span className="db-ops-name">Upload Content</span>
-                  <span className="db-ops-desc">Upload files & media</span>
+          {/* 4. CMS OPERATIONS (at the bottom for existing users) */}
+          {!isNewUser && (
+            <div className="db-operations-panel">
+              <h3 className="db-operations-title">Signage Operations</h3>
+              <div className="db-operations-grid">
+                <div className="db-ops-card" onClick={() => router.push('/admin/content')}>
+                  <div className="db-ops-icon purple"><FileVideo size={16} /></div>
+                  <div className="db-ops-texts">
+                    <span className="db-ops-name">Upload Content</span>
+                    <span className="db-ops-desc">Upload files & media</span>
+                  </div>
+                  <ChevronRight size={14} className="db-ops-arrow" />
                 </div>
-                <ChevronRight size={14} className="db-ops-arrow" />
-              </div>
-
-              <div className="db-ops-card" onClick={() => router.push('/admin/playlists')}>
-                <div className="db-ops-icon pink"><FolderHeart size={16} /></div>
-                <div className="db-ops-texts">
-                  <span className="db-ops-name">Create Playlist</span>
-                  <span className="db-ops-desc">Design loops & order</span>
+                <div className="db-ops-card" onClick={() => router.push('/admin/playlists')}>
+                  <div className="db-ops-icon pink"><FolderHeart size={16} /></div>
+                  <div className="db-ops-texts">
+                    <span className="db-ops-name">Create Playlist</span>
+                    <span className="db-ops-desc">Design loops & order</span>
+                  </div>
+                  <ChevronRight size={14} className="db-ops-arrow" />
                 </div>
-                <ChevronRight size={14} className="db-ops-arrow" />
-              </div>
-
-              <div className="db-ops-card" onClick={() => router.push('/admin/schedules')}>
-                <div className="db-ops-icon indigo"><Calendar size={16} /></div>
-                <div className="db-ops-texts">
-                  <span className="db-ops-name">Schedule Content</span>
-                  <span className="db-ops-desc">Configure display hours</span>
+                <div className="db-ops-card" onClick={() => router.push('/admin/schedules')}>
+                  <div className="db-ops-icon indigo"><Calendar size={16} /></div>
+                  <div className="db-ops-texts">
+                    <span className="db-ops-name">Schedule Content</span>
+                    <span className="db-ops-desc">Configure display hours</span>
+                  </div>
+                  <ChevronRight size={14} className="db-ops-arrow" />
                 </div>
-                <ChevronRight size={14} className="db-ops-arrow" />
-              </div>
-
-              <div className="db-ops-card" onClick={() => router.push('/admin/screens')}>
-                <div className="db-ops-icon green"><Monitor size={16} /></div>
-                <div className="db-ops-texts">
-                  <span className="db-ops-name">Manage Screens</span>
-                  <span className="db-ops-desc">Monitor hardware states</span>
+                <div className="db-ops-card" onClick={() => router.push('/admin/screens')}>
+                  <div className="db-ops-icon green"><Monitor size={16} /></div>
+                  <div className="db-ops-texts">
+                    <span className="db-ops-name">Manage Screens</span>
+                    <span className="db-ops-desc">Monitor hardware states</span>
+                  </div>
+                  <ChevronRight size={14} className="db-ops-arrow" />
                 </div>
-                <ChevronRight size={14} className="db-ops-arrow" />
               </div>
-
             </div>
-          </div>
+          )}
 
         </div>
 
-        {/* ─── RIGHT PANEL: CREDITS & STATS ONLY ─── */}
+        {/* ─── RIGHT SIDEBAR ─── */}
         <div className="db-content-right-sidebar">
 
           {/* CREDITS WIDGET */}
-          <div className="db-sidebar-widget">
+          <div className="db-sidebar-widget db-credits-widget">
             <h4 className="db-widget-title">Template Credits</h4>
             <div className="db-sidebar-credits-box">
-              <div className="db-circular-display">
-                <span className="db-circular-number">{remainingCredits}</span>
-                <span className="db-circular-lbl">Remaining</span>
-              </div>
-              
+              <span className="db-credits-big-number">{remainingCredits}</span>
+              <span className="db-credits-big-label">Available for premium template purchases</span>
+
               <div className="db-credits-progress-horizontal-bg">
                 <div className="db-credits-progress-horizontal-fill" style={{ width: `${Math.min(100, ((credits?.used ?? 0) / (credits?.total || 1)) * 100)}%` }} />
               </div>
-              
+
               <div className="db-credits-metrics-row">
                 <span>Used: <strong>{credits?.used ?? 0}</strong></span>
                 <span>Total: <strong>{credits?.total || 0}</strong></span>
               </div>
 
+              {remainingCredits > 0 && (
+                <p className="db-credits-estimate">Enough for approximately {Math.max(1, estimatedTemplates)}–{Math.max(2, estimatedTemplates + Math.ceil(estimatedTemplates * 0.5))} premium templates</p>
+              )}
+
               <button onClick={() => setShowCreditModal(true)} className="db-widget-buy-btn" id="dash-buy-credits-btn">
-                <Coins size={12} />
-                <span>Buy Credits</span>
+                <Coins size={13} />
+                <span>Buy More Credits</span>
               </button>
             </div>
           </div>
@@ -824,80 +900,30 @@ export default function DashboardMainPage() {
           <div className="db-sidebar-widget">
             <h4 className="db-widget-title">Quick Stats</h4>
             <div className="db-widget-stats-rows">
-              
               <div className="db-widget-stat-row" onClick={() => router.push('/admin/screens')}>
                 <div className="db-widget-stat-icon green"><Monitor size={12} /></div>
                 <span className="db-widget-stat-label">Screens Online</span>
-                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val green-text">{stats.screensOnline} online</span>}
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val green-text">{stats.screensOnline}</span>}
               </div>
-
               <div className="db-widget-stat-row" onClick={() => router.push('/admin/schedules')}>
                 <div className="db-widget-stat-icon purple"><Calendar size={12} /></div>
                 <span className="db-widget-stat-label">Active Schedules</span>
-                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val purple-text">{stats.scheduledToday} active</span>}
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val purple-text">{stats.scheduledToday}</span>}
               </div>
-
               <div className="db-widget-stat-row" onClick={() => router.push('/admin/playlists')}>
                 <div className="db-widget-stat-icon orange"><FolderHeart size={12} /></div>
                 <span className="db-widget-stat-label">Playlists</span>
-                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val">{stats.playlists} files</span>}
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val">{stats.playlists}</span>}
               </div>
-
-            </div>
-          </div>
-
-          {/* COMPACT ORG INFO & LOCATION SELECTOR */}
-          <div className="db-sidebar-widget">
-            <h4 className="db-widget-title">Organization Settings</h4>
-            <div className="db-widget-org-body">
-              <div className="db-widget-org-desc">
-                <Building2 size={13} className="db-widget-icon-dim" />
-                <span className="db-widget-org-name-text">{orgName}</span>
-              </div>
-              
-              {/* Dropdown switch active context */}
-              <div className="db-widget-loc-picker-container">
-                <button
-                  disabled={switching}
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="db-widget-loc-trigger"
-                >
-                  <MapPin size={12} />
-                  <span className="db-widget-loc-name-txt">{currentLocation?.name || 'Switch Location'}</span>
-                  <ChevronDown size={12} className={`db-widget-loc-chevron ${isDropdownOpen ? 'open' : ''}`} />
-                </button>
-
-                {isDropdownOpen && (
-                  <>
-                    <div className="db-widget-loc-overlay" onClick={() => setIsDropdownOpen(false)} />
-                    <div className="db-widget-loc-popover">
-                      <p className="db-popover-title">Locations ({locations.length})</p>
-                      <div className="db-popover-scrollable">
-                        {locations.map((loc: any) => (
-                          <button
-                            key={loc.id}
-                            onClick={() => handleLocationChange(loc)}
-                            className={`db-popover-item ${currentLocation?.id === loc.id ? 'active' : ''}`}
-                          >
-                            <MapPin size={12} />
-                            <span>{loc.name || 'Unnamed'}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="db-popover-footer">
-                        <button onClick={() => { setIsDropdownOpen(false); router.push('/admin/locations/0'); }} className="db-popover-add-btn">
-                          <Plus size={12} />
-                          <span>Add Location</span>
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
+              <div className="db-widget-stat-row" onClick={() => router.push('/admin/content')}>
+                <div className="db-widget-stat-icon indigo"><FileVideo size={12} /></div>
+                <span className="db-widget-stat-label">Files Uploaded</span>
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val">{stats.files}</span>}
               </div>
             </div>
           </div>
 
-          {/* MINIMAL SUBSCRIPTION (reduced weight) */}
+          {/* MINIMAL SUBSCRIPTION */}
           {!subLoading && subPlan && (
             <div className="db-sidebar-widget-sub">
               <div className="db-sub-plan-badge-compact">
@@ -907,6 +933,52 @@ export default function DashboardMainPage() {
               <span className="db-sub-plan-licenses-compact">{subPlan.usedScreens} / {subPlan.totalScreens} screen licenses used</span>
             </div>
           )}
+
+          {/* COMPACT ORG INFO & LOCATION SELECTOR (moved to bottom) */}
+          <div className="db-sidebar-widget-compact">
+            <div className="db-widget-org-compact-row">
+              <Building2 size={12} className="db-widget-icon-dim" />
+              <span className="db-widget-org-name-text">{orgName}</span>
+            </div>
+            <div className="db-widget-loc-picker-container">
+              <button
+                disabled={switching}
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="db-widget-loc-trigger"
+              >
+                <MapPin size={12} />
+                <span className="db-widget-loc-name-txt">{currentLocation?.name || 'Switch Location'}</span>
+                <ChevronDown size={12} className={`db-widget-loc-chevron ${isDropdownOpen ? 'open' : ''}`} />
+              </button>
+
+              {isDropdownOpen && (
+                <>
+                  <div className="db-widget-loc-overlay" onClick={() => setIsDropdownOpen(false)} />
+                  <div className="db-widget-loc-popover">
+                    <p className="db-popover-title">Locations ({locations.length})</p>
+                    <div className="db-popover-scrollable">
+                      {locations.map((loc: any) => (
+                        <button
+                          key={loc.id}
+                          onClick={() => handleLocationChange(loc)}
+                          className={`db-popover-item ${currentLocation?.id === loc.id ? 'active' : ''}`}
+                        >
+                          <MapPin size={12} />
+                          <span>{loc.name || 'Unnamed'}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="db-popover-footer">
+                      <button onClick={() => { setIsDropdownOpen(false); router.push('/admin/locations/0'); }} className="db-popover-add-btn">
+                        <Plus size={12} />
+                        <span>Add Location</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
 
         </div>
 
@@ -958,13 +1030,13 @@ export default function DashboardMainPage() {
                         <span>Open in Canva</span>
                       </button>
                     ) : (
-                      <button 
-                        className="db-preview-action-btn primary" 
+                      <button
+                        className="db-preview-action-btn primary"
                         disabled={buyingId !== null}
                         onClick={() => buyTemplate(previewTemplate)}
                       >
-                        {buyingId === previewTemplate.id ? <Loader2 size={14} className="db-spin" /> : <ShoppingBag size={14} />}
-                        <span>Unlock Design ({previewTemplate.creditCost ?? 0} cr)</span>
+                        {buyingId === previewTemplate.id ? <Loader2 size={14} className="db-spin" /> : <Lock size={14} />}
+                        <span>Unlock Template ({previewTemplate.creditCost ?? 0} Credits)</span>
                       </button>
                     )}
                     <button className="db-preview-action-btn secondary" onClick={() => setPreviewTemplate(null)}>
@@ -979,9 +1051,7 @@ export default function DashboardMainPage() {
         </div>
       )}
 
-      {/* ─── COMPACT PREVIEW/CANVA STYLES ─── */}
       <style>{`
-        /* Base page layout */
         .db-page {
           display: flex;
           flex-direction: column;
@@ -997,24 +1067,23 @@ export default function DashboardMainPage() {
 
         .db-main-container {
           display: grid;
-          grid-template-columns: 1fr 270px;
+          grid-template-columns: 1fr 280px;
           gap: 1.5rem;
           align-items: start;
         }
 
-        /* Left Side */
         .db-content-left {
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
         }
 
-        /* 1. Compact Hero Banner */
+        /* ─── HERO ─── */
         .db-compact-hero {
           position: relative;
           background: linear-gradient(135deg, #4f46e5 0%, #7d2ae8 60%, #ec4899 100%);
           border-radius: 20px;
-          padding: 1.75rem 2rem;
+          padding: 2rem 2.25rem;
           color: white;
           overflow: hidden;
           box-shadow: 0 10px 30px rgba(125, 42, 232, 0.12);
@@ -1030,44 +1099,55 @@ export default function DashboardMainPage() {
         .db-hero-inner {
           position: relative;
           z-index: 2;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 1.5rem;
         }
 
         .db-hero-left {
-          flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 0.75rem;
+          gap: 0.65rem;
         }
 
-        .db-hero-badge {
-          align-self: flex-start;
-          font-size: 0.62rem;
+        .db-hero-title {
+          font-size: 1.45rem;
           font-weight: 800;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          background: rgba(255, 255, 255, 0.15);
-          border: 1px solid rgba(255, 255, 255, 0.25);
-          padding: 0.25rem 0.65rem;
-          border-radius: 20px;
+          margin: 0;
+          line-height: 1.25;
+          max-width: 520px;
         }
 
         .db-hero-pitch {
-          font-size: 0.92rem;
-          line-height: 1.45;
+          font-size: 0.88rem;
+          line-height: 1.5;
           margin: 0;
-          max-width: 540px;
-          opacity: 0.95;
+          max-width: 580px;
+          opacity: 0.92;
           font-weight: 500;
+        }
+
+        .db-hero-credit-msg {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(8px);
+          padding: 0.4rem 0.85rem;
+          border-radius: 10px;
+          font-size: 0.78rem;
+          font-weight: 500;
+          align-self: flex-start;
+        }
+
+        .db-hero-credit-msg strong {
+          font-weight: 800;
+          color: #fbbf24;
         }
 
         .db-hero-ctas {
           display: flex;
-          gap: 0.75rem;
-          margin-top: 0.25rem;
+          gap: 0.65rem;
+          margin-top: 0.35rem;
+          flex-wrap: wrap;
         }
 
         .db-cta-primary {
@@ -1075,8 +1155,8 @@ export default function DashboardMainPage() {
           color: #7d2ae8;
           border: none;
           font-weight: 700;
-          font-size: 0.78rem;
-          padding: 0.55rem 1.1rem;
+          font-size: 0.8rem;
+          padding: 0.6rem 1.2rem;
           border-radius: 10px;
           cursor: pointer;
           display: inline-flex;
@@ -1091,13 +1171,34 @@ export default function DashboardMainPage() {
           background: #fbfbfd;
         }
 
+        .db-cta-buy-credits {
+          background: #f59e0b;
+          color: white;
+          border: none;
+          font-weight: 700;
+          font-size: 0.8rem;
+          padding: 0.6rem 1.2rem;
+          border-radius: 10px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+          transition: all 0.2s;
+        }
+
+        .db-cta-buy-credits:hover {
+          transform: translateY(-1px);
+          background: #e89209;
+        }
+
         .db-cta-secondary {
           background: rgba(255, 255, 255, 0.12);
           border: 1px solid rgba(255, 255, 255, 0.22);
           color: white;
           font-weight: 600;
-          font-size: 0.78rem;
-          padding: 0.55rem 1.1rem;
+          font-size: 0.8rem;
+          padding: 0.6rem 1.2rem;
           border-radius: 10px;
           cursor: pointer;
           display: inline-flex;
@@ -1112,45 +1213,196 @@ export default function DashboardMainPage() {
           transform: translateY(-1px);
         }
 
-        .db-hero-right {
-          flex-shrink: 0;
+        .db-cta-screen {
+          background: #10b981;
+          color: white;
+          border: none;
+          font-weight: 700;
+          font-size: 0.8rem;
+          padding: 0.6rem 1.2rem;
+          border-radius: 10px;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+          transition: all 0.2s;
         }
 
-        .db-credits-hero-card {
-          background: rgba(0, 0, 0, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          backdrop-filter: blur(10px);
-          padding: 0.85rem 1.25rem;
-          border-radius: 16px;
+        .db-cta-screen:hover {
+          transform: translateY(-1px);
+          background: #059669;
+        }
+
+        /* ─── QUICK STATS BAR ─── */
+        .db-stats-bar {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0.75rem;
+        }
+
+        .db-stat-chip {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          padding: 0.75rem 0.85rem;
           display: flex;
           align-items: center;
           gap: 0.65rem;
+          cursor: pointer;
+          transition: all 0.15s;
         }
 
-        .db-credits-hero-icon {
-          color: #f59e0b;
-          width: 24px;
-          height: 24px;
+        .db-stat-chip:hover {
+          border-color: #7d2ae8;
+          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.06);
         }
 
-        .db-credits-hero-details {
+        .db-stat-chip-icon {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .db-stat-chip-icon.green { background: rgba(34, 197, 94, 0.08); color: #22c55e; }
+        .db-stat-chip-icon.purple { background: rgba(125, 42, 232, 0.08); color: #7d2ae8; }
+        .db-stat-chip-icon.pink { background: rgba(236, 72, 153, 0.08); color: #ec4899; }
+        .db-stat-chip-icon.indigo { background: rgba(79, 70, 229, 0.08); color: #4f46e5; }
+
+        .db-stat-chip-info {
           display: flex;
           flex-direction: column;
         }
 
-        .db-credits-hero-lbl {
+        .db-stat-chip-val {
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: var(--text);
+          line-height: 1.15;
+        }
+
+        .db-stat-chip-lbl {
           font-size: 0.62rem;
-          opacity: 0.8;
-          text-transform: uppercase;
+          color: var(--text-muted);
           font-weight: 600;
         }
 
-        .db-credits-hero-val {
-          font-size: 1.15rem;
-          font-weight: 800;
+        /* ─── GETTING STARTED (new users) ─── */
+        .db-getting-started {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 20px;
+          padding: 1.5rem;
         }
 
-        /* 2. Template Discovery Panel */
+        .db-getting-started-title {
+          font-size: 1rem;
+          font-weight: 700;
+          color: var(--text);
+          margin: 0;
+        }
+
+        .db-getting-started-sub {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          margin: 0.2rem 0 1rem;
+        }
+
+        .db-steps-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 0.75rem;
+        }
+
+        .db-step-card {
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 0.85rem 1rem;
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .db-step-card:hover {
+          border-color: #7d2ae8;
+          background: var(--card-bg);
+        }
+
+        .db-step-num {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #7d2ae8, #ec4899);
+          color: white;
+          font-size: 0.72rem;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .db-step-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .db-step-name {
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: var(--text);
+        }
+
+        .db-step-desc {
+          font-size: 0.62rem;
+          color: var(--text-muted);
+        }
+
+        .db-step-arrow {
+          color: var(--text-muted);
+          opacity: 0.4;
+        }
+
+        .db-getting-started-alt {
+          margin-top: 1.1rem;
+          padding-top: 1rem;
+          border-top: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          gap: 0.85rem;
+          font-size: 0.78rem;
+          color: var(--text-muted);
+        }
+
+        .db-alt-browse-btn {
+          background: linear-gradient(135deg, #7d2ae8 0%, #ec4899 100%);
+          color: white;
+          border: none;
+          padding: 0.45rem 1rem;
+          border-radius: 8px;
+          font-size: 0.74rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          transition: all 0.2s;
+        }
+
+        .db-alt-browse-btn:hover {
+          opacity: 0.9;
+          transform: translateY(-1px);
+        }
+
+        /* ─── TEMPLATE MARKETPLACE ─── */
         .db-discovery-panel {
           background: var(--card-bg);
           border: 1px solid var(--border);
@@ -1171,7 +1423,7 @@ export default function DashboardMainPage() {
         }
 
         .db-discovery-title {
-          font-size: 1rem;
+          font-size: 1.05rem;
           font-weight: 700;
           color: var(--text);
           margin: 0;
@@ -1190,10 +1442,9 @@ export default function DashboardMainPage() {
           margin: 0.15rem 0 0;
         }
 
-        /* Search Bar */
         .db-search-bar-wrapper {
           position: relative;
-          width: 220px;
+          width: 240px;
         }
 
         .db-search-icon {
@@ -1210,7 +1461,7 @@ export default function DashboardMainPage() {
           background: var(--sidebar-bg);
           border: 1px solid var(--border);
           border-radius: 8px;
-          padding: 0.4rem 0.6rem 0.4rem 1.85rem;
+          padding: 0.45rem 0.6rem 0.45rem 1.85rem;
           font-size: 0.75rem;
           color: var(--text);
           outline: none;
@@ -1222,7 +1473,6 @@ export default function DashboardMainPage() {
           background: var(--card-bg);
         }
 
-        /* Category pills selection */
         .db-category-pills {
           display: flex;
           gap: 0.4rem;
@@ -1237,7 +1487,7 @@ export default function DashboardMainPage() {
 
         .db-pill-btn {
           flex-shrink: 0;
-          padding: 0.4rem 0.8rem;
+          padding: 0.42rem 0.85rem;
           border-radius: 20px;
           border: 1px solid var(--border);
           background: var(--card-bg);
@@ -1260,15 +1510,15 @@ export default function DashboardMainPage() {
           box-shadow: 0 4px 10px rgba(125, 42, 232, 0.12);
         }
 
-        /* Large template card grid (2 per row) */
+        /* Template cards - LARGER */
         .db-large-templates-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 1.25rem;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1.35rem;
         }
 
         .db-large-template-card {
-          background: #ffffff;
+          background: var(--card-bg);
           border: 1px solid var(--border);
           border-radius: 16px;
           overflow: hidden;
@@ -1280,12 +1530,11 @@ export default function DashboardMainPage() {
         }
 
         .db-large-template-card:hover {
-          transform: translateY(-2px);
+          transform: translateY(-3px);
           border-color: #7d2ae8;
-          box-shadow: 0 10px 24px rgba(125, 42, 232, 0.08);
+          box-shadow: 0 12px 28px rgba(125, 42, 232, 0.1);
         }
 
-        /* Center-preview in light gray background */
         .db-card-preview-container {
           position: relative;
           width: 100%;
@@ -1310,11 +1559,10 @@ export default function DashboardMainPage() {
           opacity: 0.6;
         }
 
-        /* Badges inside card preview */
         .db-card-top-left-badges {
           position: absolute;
-          top: 8px;
-          left: 8px;
+          top: 10px;
+          left: 10px;
           display: flex;
           gap: 0.3rem;
         }
@@ -1322,34 +1570,24 @@ export default function DashboardMainPage() {
         .db-badge-orientation {
           background: rgba(0, 0, 0, 0.65);
           color: white;
-          font-size: 0.58rem;
+          font-size: 0.6rem;
           font-weight: 700;
-          padding: 0.2rem 0.45rem;
-          border-radius: 4px;
+          padding: 0.22rem 0.5rem;
+          border-radius: 5px;
           backdrop-filter: blur(2px);
-        }
-
-        .db-badge-size {
-          background: rgba(255, 255, 255, 0.85);
-          color: #333;
-          font-size: 0.58rem;
-          font-weight: 600;
-          padding: 0.2rem 0.45rem;
-          border-radius: 4px;
-          border: 1px solid rgba(0,0,0,0.05);
         }
 
         .db-card-top-right-badges {
           position: absolute;
-          top: 8px;
-          right: 8px;
+          top: 10px;
+          right: 10px;
         }
 
         .db-badge-credits {
-          font-size: 0.58rem;
+          font-size: 0.6rem;
           font-weight: 700;
-          padding: 0.2rem 0.45rem;
-          border-radius: 4px;
+          padding: 0.22rem 0.55rem;
+          border-radius: 5px;
           color: white;
         }
 
@@ -1357,14 +1595,12 @@ export default function DashboardMainPage() {
         .db-badge-credits.free { background: #3b82f6; }
         .db-badge-credits.cost { background: #f59e0b; }
 
-        /* Card details */
         .db-card-details-row {
-          padding: 0.75rem 1rem 0.85rem;
+          padding: 0.85rem 1.1rem;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 1rem;
-          background: #ffffff;
+          gap: 0.75rem;
         }
 
         .db-card-info-texts {
@@ -1374,9 +1610,9 @@ export default function DashboardMainPage() {
 
         .db-card-title-text {
           margin: 0;
-          font-size: 0.78rem;
+          font-size: 0.82rem;
           font-weight: 700;
-          color: #1e293b;
+          color: var(--text);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1384,46 +1620,49 @@ export default function DashboardMainPage() {
 
         .db-card-actions-wrapper {
           display: flex;
-          gap: 0.35rem;
+          gap: 0.4rem;
           flex-shrink: 0;
         }
 
         .db-btn-card-preview {
-          background: #f1f5f9;
-          color: #475569;
-          border: none;
-          border-radius: 6px;
-          padding: 0.35rem 0.6rem;
+          background: var(--sidebar-bg);
+          color: var(--text-muted);
+          border: 1px solid var(--border);
+          border-radius: 7px;
+          padding: 0.38rem 0.65rem;
           font-size: 0.68rem;
           font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;
           gap: 0.25rem;
+          transition: all 0.15s;
         }
 
         .db-btn-card-preview:hover {
-          background: #e2e8f0;
+          border-color: #7d2ae8;
+          color: #7d2ae8;
         }
 
         .db-btn-card-action {
           border: none;
-          border-radius: 6px;
-          padding: 0.35rem 0.65rem;
+          border-radius: 7px;
+          padding: 0.38rem 0.7rem;
           font-size: 0.68rem;
           font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 0.25rem;
+          gap: 0.3rem;
           color: white;
+          transition: all 0.15s;
         }
 
         .db-btn-card-action.use { background: #7d2ae8; }
-        .db-btn-card-action.buy { background: #f59e0b; }
-        .db-btn-card-action:hover { opacity: 0.9; }
+        .db-btn-card-action.buy { background: linear-gradient(135deg, #7d2ae8 0%, #6d28d9 100%); }
+        .db-btn-card-action:hover { opacity: 0.9; transform: translateY(-1px); }
 
-        /* 3. Horizontal recommended list */
+        /* Recommended horizontal */
         .db-horizontal-recommended-row {
           display: flex;
           gap: 0.85rem;
@@ -1434,23 +1673,25 @@ export default function DashboardMainPage() {
 
         .db-recommended-card-item {
           flex-shrink: 0;
-          width: 140px;
-          background: #ffffff;
+          width: 160px;
+          background: var(--card-bg);
           border: 1px solid var(--border);
           border-radius: 12px;
           overflow: hidden;
           cursor: pointer;
-          transition: border-color 0.15s;
+          transition: all 0.15s;
         }
 
         .db-recommended-card-item:hover {
           border-color: #7d2ae8;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(125, 42, 232, 0.06);
         }
 
         .db-recommended-thumb-area {
           position: relative;
           aspect-ratio: 4/3;
-          background: var(--bg-base);
+          background: var(--sidebar-bg);
           overflow: hidden;
         }
 
@@ -1462,35 +1703,35 @@ export default function DashboardMainPage() {
 
         .db-recommended-orient-lbl {
           position: absolute;
-          bottom: 4px;
-          left: 4px;
+          bottom: 5px;
+          left: 5px;
           background: rgba(0,0,0,0.6);
           color: white;
-          font-size: 0.5rem;
+          font-size: 0.52rem;
           font-weight: 600;
-          padding: 1px 3px;
+          padding: 2px 4px;
           border-radius: 3px;
         }
 
         .db-recommended-cost-lbl {
           position: absolute;
-          top: 4px;
-          right: 4px;
+          top: 5px;
+          right: 5px;
           background: rgba(245, 158, 11, 0.85);
           color: white;
-          font-size: 0.5rem;
+          font-size: 0.52rem;
           font-weight: 700;
-          padding: 1px 3px;
+          padding: 2px 4px;
           border-radius: 3px;
         }
 
         .db-recommended-info {
-          padding: 0.35rem;
+          padding: 0.4rem 0.5rem;
         }
 
         .db-recommended-title {
           margin: 0;
-          font-size: 0.65rem;
+          font-size: 0.68rem;
           font-weight: 600;
           color: var(--text);
           white-space: nowrap;
@@ -1498,7 +1739,7 @@ export default function DashboardMainPage() {
           text-overflow: ellipsis;
         }
 
-        /* 4. Operations Panel (At the bottom) */
+        /* ─── OPERATIONS ─── */
         .db-operations-panel {
           background: var(--card-bg);
           border: 1px solid var(--border);
@@ -1577,7 +1818,13 @@ export default function DashboardMainPage() {
           opacity: 0.5;
         }
 
-        /* ─── SIDEBAR WIDGETS ─── */
+        /* ─── SIDEBAR ─── */
+        .db-content-right-sidebar {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+
         .db-sidebar-widget {
           background: var(--card-bg);
           border: 1px solid var(--border);
@@ -1590,7 +1837,7 @@ export default function DashboardMainPage() {
         }
 
         .db-widget-title {
-          font-size: 0.78rem;
+          font-size: 0.72rem;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.06em;
@@ -1598,7 +1845,12 @@ export default function DashboardMainPage() {
           margin: 0;
         }
 
-        /* Sidebar Credits */
+        /* Credits Widget (enhanced) */
+        .db-credits-widget {
+          background: linear-gradient(135deg, rgba(125, 42, 232, 0.03), rgba(236, 72, 153, 0.03));
+          border-color: rgba(125, 42, 232, 0.15);
+        }
+
         .db-sidebar-credits-box {
           display: flex;
           flex-direction: column;
@@ -1606,29 +1858,22 @@ export default function DashboardMainPage() {
           align-items: center;
         }
 
-        .db-circular-display {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          width: 90px;
-          height: 90px;
-          border: 6px solid #f59e0b;
-          border-radius: 50%;
-        }
-
-        .db-circular-number {
-          font-size: 1.4rem;
+        .db-credits-big-number {
+          font-size: 2.8rem;
           font-weight: 800;
           color: var(--text);
           line-height: 1;
+          background: linear-gradient(135deg, #7d2ae8, #f59e0b);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
         }
 
-        .db-circular-lbl {
-          font-size: 0.55rem;
-          font-weight: 600;
+        .db-credits-big-label {
+          font-size: 0.68rem;
           color: var(--text-muted);
-          text-transform: uppercase;
+          text-align: center;
+          line-height: 1.35;
         }
 
         .db-credits-progress-horizontal-bg {
@@ -1641,7 +1886,7 @@ export default function DashboardMainPage() {
 
         .db-credits-progress-horizontal-fill {
           height: 100%;
-          background: #f59e0b;
+          background: linear-gradient(90deg, #7d2ae8, #f59e0b);
           border-radius: 10px;
         }
 
@@ -1649,8 +1894,17 @@ export default function DashboardMainPage() {
           width: 100%;
           display: flex;
           justify-content: space-between;
-          font-size: 0.68rem;
+          font-size: 0.65rem;
           color: var(--text-muted);
+        }
+
+        .db-credits-estimate {
+          font-size: 0.65rem;
+          color: var(--text-muted);
+          text-align: center;
+          margin: 0;
+          font-style: italic;
+          opacity: 0.85;
         }
 
         .db-widget-buy-btn {
@@ -1658,30 +1912,36 @@ export default function DashboardMainPage() {
           background: linear-gradient(135deg, #7d2ae8 0%, #ec4899 100%);
           color: white;
           border: none;
-          padding: 0.5rem;
-          border-radius: 8px;
-          font-size: 0.72rem;
+          padding: 0.55rem;
+          border-radius: 10px;
+          font-size: 0.75rem;
           font-weight: 700;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 0.35rem;
-          box-shadow: 0 4px 10px rgba(125, 42, 232, 0.12);
+          gap: 0.4rem;
+          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.15);
+          transition: all 0.2s;
         }
 
-        /* Stats compact widgets */
+        .db-widget-buy-btn:hover {
+          opacity: 0.92;
+          transform: translateY(-1px);
+        }
+
+        /* Stats rows */
         .db-widget-stats-rows {
           display: flex;
           flex-direction: column;
-          gap: 0.45rem;
+          gap: 0.4rem;
         }
 
         .db-widget-stat-row {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          padding: 0.45rem 0.65rem;
+          padding: 0.45rem 0.6rem;
           border-radius: 8px;
           background: var(--sidebar-bg);
           border: 1px solid var(--border);
@@ -1705,16 +1965,17 @@ export default function DashboardMainPage() {
         .db-widget-stat-icon.green { background: rgba(34, 197, 94, 0.07); color: #22c55e; }
         .db-widget-stat-icon.purple { background: rgba(125, 42, 232, 0.07); color: #7d2ae8; }
         .db-widget-stat-icon.orange { background: rgba(245, 158, 11, 0.07); color: #f59e0b; }
+        .db-widget-stat-icon.indigo { background: rgba(79, 70, 229, 0.07); color: #4f46e5; }
 
         .db-widget-stat-label {
-          font-size: 0.68rem;
+          font-size: 0.65rem;
           color: var(--text-muted);
           flex: 1;
         }
 
         .db-widget-stat-val {
-          font-size: 0.68rem;
-          font-weight: 700;
+          font-size: 0.7rem;
+          font-weight: 800;
         }
 
         .db-widget-stat-val.green-text { color: #22c55e; }
@@ -1729,14 +1990,43 @@ export default function DashboardMainPage() {
           animation: db-spin-key 0.8s linear infinite;
         }
 
-        /* Sidebar Org/Location */
-        .db-widget-org-body {
+        /* Subscription */
+        .db-sidebar-widget-sub {
+          background: rgba(125, 42, 232, 0.04);
+          border: 1px solid rgba(125, 42, 232, 0.15);
+          border-radius: 12px;
+          padding: 0.65rem 0.85rem;
           display: flex;
           flex-direction: column;
-          gap: 0.65rem;
+          gap: 0.25rem;
         }
 
-        .db-widget-org-desc {
+        .db-sub-plan-badge-compact {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          color: #7d2ae8;
+          font-size: 0.68rem;
+          font-weight: 700;
+        }
+
+        .db-sub-plan-licenses-compact {
+          font-size: 0.6rem;
+          color: var(--text-muted);
+        }
+
+        /* Compact Org Widget (bottom of sidebar) */
+        .db-sidebar-widget-compact {
+          background: var(--card-bg);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 0.75rem 0.85rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.45rem;
+        }
+
+        .db-widget-org-compact-row {
           display: flex;
           align-items: center;
           gap: 0.4rem;
@@ -1748,7 +2038,7 @@ export default function DashboardMainPage() {
         }
 
         .db-widget-org-name-text {
-          font-size: 0.72rem;
+          font-size: 0.7rem;
           font-weight: 700;
           color: var(--text);
           white-space: nowrap;
@@ -1765,18 +2055,18 @@ export default function DashboardMainPage() {
           background: var(--sidebar-bg);
           border: 1px solid var(--border);
           border-radius: 6px;
-          padding: 0.4rem 0.6rem;
+          padding: 0.35rem 0.55rem;
           display: flex;
           align-items: center;
           gap: 0.3rem;
           cursor: pointer;
           color: var(--text);
           text-align: left;
+          font-size: 0.68rem;
         }
 
         .db-widget-loc-name-txt {
-          font-size: 0.68rem;
-          font-weight: 700;
+          font-weight: 600;
           flex: 1;
           white-space: nowrap;
           overflow: hidden;
@@ -1874,32 +2164,7 @@ export default function DashboardMainPage() {
           background: var(--sidebar-hover);
         }
 
-        /* Subscription compact widget */
-        .db-sidebar-widget-sub {
-          background: rgba(125, 42, 232, 0.04);
-          border: 1px solid rgba(125, 42, 232, 0.15);
-          border-radius: 12px;
-          padding: 0.65rem 0.85rem;
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
-        }
-
-        .db-sub-plan-badge-compact {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          color: #7d2ae8;
-          font-size: 0.68rem;
-          font-weight: 700;
-        }
-
-        .db-sub-plan-licenses-compact {
-          font-size: 0.6rem;
-          color: var(--text-muted);
-        }
-
-        /* ─── PREVIEW DIALOG MODAL ─── */
+        /* ─── PREVIEW MODAL ─── */
         .db-preview-modal-overlay {
           position: fixed;
           inset: 0;
@@ -1915,7 +2180,7 @@ export default function DashboardMainPage() {
           background: var(--card-bg);
           border: 1px solid var(--border);
           border-radius: 20px;
-          width: 680px;
+          width: 700px;
           max-width: 90vw;
           box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
           overflow: hidden;
@@ -1962,7 +2227,6 @@ export default function DashboardMainPage() {
           gap: 1.25rem;
         }
 
-        /* Preview container max sizes contain */
         .db-preview-image-section {
           background: #f8fafc;
           border-radius: 10px;
@@ -2091,7 +2355,7 @@ export default function DashboardMainPage() {
           background: var(--btn-secondary-hover);
         }
 
-        /* ─── COMMON UTILITIES ─── */
+        /* ─── UTILITIES ─── */
         .db-spin {
           animation: db-spin-key 1s linear infinite;
         }
@@ -2106,8 +2370,8 @@ export default function DashboardMainPage() {
         }
 
         .db-skeleton-card {
-          width: 140px;
-          height: 100px;
+          width: 160px;
+          height: 120px;
           border-radius: 12px;
           background: var(--sidebar-bg);
           border: 1px solid var(--border);
@@ -2115,7 +2379,7 @@ export default function DashboardMainPage() {
         }
 
         .db-skeleton-large-card {
-          height: 220px;
+          height: 240px;
           border-radius: 16px;
           background: var(--sidebar-bg);
           border: 1px solid var(--border);
@@ -2129,8 +2393,8 @@ export default function DashboardMainPage() {
 
         .db-grid-loading {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 1.25rem;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 1.35rem;
         }
 
         .db-no-results-card {
@@ -2147,7 +2411,21 @@ export default function DashboardMainPage() {
           margin: 0;
         }
 
-        /* Responsive Layouts */
+        .db-empty-discovery {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          margin: 0;
+        }
+
+        .gold-text { color: #f59e0b; }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 1100px) {
+          .db-stats-bar {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
         @media (max-width: 900px) {
           .db-main-container {
             grid-template-columns: 1fr;
@@ -2161,17 +2439,19 @@ export default function DashboardMainPage() {
 
         @media (max-width: 640px) {
           .db-compact-hero {
-            padding: 1.25rem;
+            padding: 1.5rem;
           }
-          .db-hero-inner {
+          .db-hero-title {
+            font-size: 1.15rem;
+          }
+          .db-hero-ctas {
             flex-direction: column;
-            align-items: flex-start;
           }
-          .db-hero-right {
-            width: 100%;
+          .db-stats-bar {
+            grid-template-columns: repeat(2, 1fr);
           }
-          .db-credits-hero-card {
-            justify-content: center;
+          .db-steps-grid {
+            grid-template-columns: 1fr;
           }
           .db-large-templates-grid {
             grid-template-columns: 1fr;
