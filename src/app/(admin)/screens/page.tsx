@@ -12,6 +12,7 @@ import { apiAuth, cmsApi, cmsApiV2 } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { useSocketContext } from '@/context/SocketContext';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import TrialExpiredUpgradeModal, { type TrialScreenSummary } from '@/components/shared/TrialExpiredUpgradeModal';
 import { useUpgradeModal } from '@/hooks/useUpgradeModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -36,6 +37,8 @@ interface PlanStatus {
   canCreateScreen: boolean;
   totalScreens: number;
   usedScreens: number;
+  trialExpiredWithActiveScreens: boolean;
+  trialScreens: TrialScreenSummary[];
 }
 
 // ─── Status badge ──────────────────────────────────────────────────────────────
@@ -78,7 +81,25 @@ function DeleteConfirm({ name, onConfirm, onClose, loading, t }: {
 
 // ─── Upgrade banner ───────────────────────────────────────────────────────────
 
-function UpgradeBanner({ used, total, t }: { used: number; total: number; t: (k: string) => string }) {
+function UpgradeBanner({
+  used, total, t, trialExpired, onUpgrade,
+}: {
+  used: number; total: number; t: (k: string) => string;
+  trialExpired?: boolean; onUpgrade?: () => void;
+}) {
+  if (trialExpired) {
+    return (
+      <div className="upgrade-banner upgrade-banner--trial">
+        <AlertCircle size={16} />
+        <div className="upgrade-info">
+          <span className="upgrade-text">Your free trial has ended — some screens may be paused</span>
+        </div>
+        <button className="upgrade-link" onClick={onUpgrade} id="trial-upgrade-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+          Reactivate screens →
+        </button>
+      </div>
+    );
+  }
   const pct = total > 0 ? Math.round((used / total) * 100) : 0;
   return (
     <div className="upgrade-banner">
@@ -104,6 +125,7 @@ export default function ScreensPage() {
   const [search, setSearch] = useState('');
   const [plan, setPlan] = useState<PlanStatus | null>(null);
   const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
+  const [showTrialModal, setShowTrialModal] = useState(false);
   const [pagination, setPagination] = useState({ page: 0, size: 10, total: 0 });
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState<Screen | null>(null);
@@ -116,8 +138,10 @@ export default function ScreensPage() {
       .then(({ data }) => setPlan({
         planType: data.planType || '',
         canCreateScreen: data.canCreateScreen ?? true,
-        totalScreens: data.allowedScreens ?? 0, // allowed screens capacity
-        usedScreens: data.totalScreens ?? 0,    // physical screens count
+        totalScreens: data.allowedScreens ?? 0,
+        usedScreens: data.totalScreens ?? 0,
+        trialExpiredWithActiveScreens: data.trialExpiredWithActiveScreens ?? false,
+        trialScreens: data.trialScreens ?? [],
       }))
       .catch(() => {});
   }, []);
@@ -285,9 +309,15 @@ export default function ScreensPage() {
 
   return (
     <div className="screens-page">
-      {/* Plan usage banner */}
-      {plan && plan.totalScreens > 0 && (
-        <UpgradeBanner used={plan.usedScreens} total={plan.totalScreens} t={t} />
+      {/* Plan usage / trial-expired banner */}
+      {plan && (plan.trialExpiredWithActiveScreens || plan.totalScreens > 0) && (
+        <UpgradeBanner
+          used={plan.usedScreens}
+          total={plan.totalScreens}
+          t={t}
+          trialExpired={plan.trialExpiredWithActiveScreens}
+          onUpgrade={() => setShowTrialModal(true)}
+        />
       )}
 
       {/* Toolbar */}
@@ -318,7 +348,11 @@ export default function ScreensPage() {
           <button
             className="btn-primary"
             onClick={() => {
-              if (!canCreate) { openUpgrade('screen'); return; }
+              if (!canCreate) {
+                if (plan?.trialExpiredWithActiveScreens) { setShowTrialModal(true); return; }
+                openUpgrade('screen');
+                return;
+              }
               router.push('/screens/new');
             }}
             id="pair-screen-btn"
@@ -464,6 +498,25 @@ export default function ScreensPage() {
 
 
       {/* Upgrade Modal — triggered when screen limit reached */}
+      {showTrialModal && plan?.trialScreens && (
+        <TrialExpiredUpgradeModal
+          trialScreens={plan.trialScreens}
+          onClose={result => {
+            setShowTrialModal(false);
+            if (result?.success) {
+              // Refresh plan so banner + canCreate update
+              cmsApiV2.get('/sac/my/plan').then(({ data }) => setPlan({
+                planType: data.planType || '',
+                canCreateScreen: data.canCreateScreen ?? true,
+                totalScreens: data.allowedScreens ?? 0,
+                usedScreens: data.totalScreens ?? 0,
+                trialExpiredWithActiveScreens: data.trialExpiredWithActiveScreens ?? false,
+                trialScreens: data.trialScreens ?? [],
+              })).catch(() => {});
+            }
+          }}
+        />
+      )}
       {upgradeModal && (
         <UpgradeModal mode={upgradeModal} onClose={closeUpgrade} />
       )}

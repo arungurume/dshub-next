@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { RefreshCw, ReceiptText, Zap, MapPin, Monitor, Check, X, BarChart2, ShoppingBag, Download } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import UpgradeModal, { UpgradeMode } from '@/components/shared/UpgradeModal';
+import TrialExpiredUpgradeModal, { type TrialScreenSummary } from '@/components/shared/TrialExpiredUpgradeModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -162,6 +163,9 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [upgradeModal, setUpgradeModal] = useState<UpgradeMode | null>(null);
+  const [showTrialModal, setShowTrialModal] = useState(false);
+  const [trialScreens, setTrialScreens] = useState<TrialScreenSummary[]>([]);
+  const [trialExpiredWithActiveScreens, setTrialExpiredWithActiveScreens] = useState(false);
   const [showCancelSurvey, setShowCancelSurvey] = useState(false);
   const [creditBalance, setCreditBalance] = useState<{ total: number; used: number } | null>(null);
   const [activeTab, setActiveTab] = useState<'usage' | 'purchases' | 'invoices'>('usage');
@@ -194,6 +198,10 @@ export default function BillingPage() {
       cmsApiV2.get('/sac/my/locations').then(({ data }) =>
         setUsageLocations(Array.isArray(data) ? data : [])
       ).catch(() => {}),
+      cmsApiV2.get('/sac/my/plan').then(({ data }) => {
+        setTrialExpiredWithActiveScreens(data?.trialExpiredWithActiveScreens ?? false);
+        setTrialScreens(data?.trialScreens ?? []);
+      }).catch(() => {}),
     ]).finally(() => setLoading(false));
 
     // Fetch dynamic credit packs + plan limits from plan config
@@ -389,8 +397,13 @@ export default function BillingPage() {
                   <div className="resource-name">Screen Slots</div>
                   <div className="resource-desc">Purchase additional screen slots for your account.</div>
                 </div>
-                <button className="btn-primary" onClick={() => setUpgradeModal('screen')} id="buy-screens-btn">
-                  <Monitor size={14} /> Buy Screen Slots
+                <button
+                  className="btn-primary"
+                  onClick={() => trialExpiredWithActiveScreens ? setShowTrialModal(true) : setUpgradeModal('screen')}
+                  id="buy-screens-btn"
+                >
+                  <Monitor size={14} />
+                  {trialExpiredWithActiveScreens ? 'Reactivate Trial Screens' : 'Buy Screen Slots'}
                 </button>
               </div>
               <div className="resource-card">
@@ -597,6 +610,22 @@ export default function BillingPage() {
         </>
       )}
 
+      {showTrialModal && trialScreens.length > 0 && (
+        <TrialExpiredUpgradeModal
+          trialScreens={trialScreens}
+          onClose={result => {
+            setShowTrialModal(false);
+            if (result?.success) {
+              handleModalClose({ success: true });
+              // Refresh trial state
+              cmsApiV2.get('/sac/my/plan').then(({ data }) => {
+                setTrialExpiredWithActiveScreens(data?.trialExpiredWithActiveScreens ?? false);
+                setTrialScreens(data?.trialScreens ?? []);
+              }).catch(() => {});
+            }
+          }}
+        />
+      )}
       {upgradeModal && <UpgradeModal mode={upgradeModal} onClose={handleModalClose} />}
 
       {showCancelSurvey && plan && (
