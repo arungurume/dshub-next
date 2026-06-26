@@ -8,10 +8,22 @@ import {
   Check, X, Plus, Minus, Trash2, Upload, Search,
   GripVertical, Clock, Image as ImageIcon,
   Globe, Megaphone, FileSpreadsheet,
-  BarChart3, BookImage, Cloud, LayoutGrid, Calendar
+  BarChart3, BookImage, Cloud, LayoutGrid, Calendar, Monitor, Smartphone, Tv
 } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { TransitionPopup } from '@/components/shared/TransitionPopup';
+import { PlaylistItem, TransitionSettings, ContentAsset } from '@/types/playlist';
+import { WeatherAppModal } from '@/components/playlist-apps/WeatherAppModal';
+import { AnnouncementAppModal } from '@/components/playlist-apps/AnnouncementAppModal';
+import { YoutubeAppModal } from '@/components/playlist-apps/YoutubeAppModal';
+import { ZonesEditorModal } from '@/components/playlist-apps/ZonesEditorModal';
+import { InstagramAppModal } from '@/components/playlist-apps/InstagramAppModal';
+import { GoogleSheetAppModal } from '@/components/playlist-apps/GoogleSheetAppModal';
+import { CanvaPublicAppModal } from '@/components/playlist-apps/CanvaPublicAppModal';
+import {
+  GoogleSlideAppModal, MicrosoftExcelAppModal, MicrosoftPowerBiAppModal,
+  OutlookCalendarAppModal, PosterMyWallAppModal, WebsiteAppModal, GoogleCalendarAppModal
+} from '@/components/playlist-apps/GenericIframeAppModals';
 
 // Custom Instagram Icon to bypass missing member in old lucide-react version
 const Instagram = ({ size = 24, ...props }: React.SVGProps<SVGSVGElement> & { size?: number }) => (
@@ -33,31 +45,7 @@ const Instagram = ({ size = 24, ...props }: React.SVGProps<SVGSVGElement> & { si
   </svg>
 );
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface PlaylistItem {
-  id: string | number;
-  name: string;
-  thumbLink?: string;
-  duration: number;          // seconds
-  contentType?: string;
-  assetSourceType?: string;
-  permaLink?: string;
-}
-
-interface TransitionSettings {
-  type: 'NONE' | 'SLIDE' | 'FADE' | 'ZOOM' | 'ROTATE' | 'FLIP';
-  speed: 'SLOW' | 'MEDIUM' | 'FAST';
-}
-
-interface ContentAsset {
-  id: string | number;
-  name: string;
-  thumbLink?: string;
-  contentType?: string;
-  duration?: number;
-  permaLink?: string;
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -130,92 +118,10 @@ const APP_ITEMS = [
   { label: 'Outlook Calendar',   sub: 'Calendar',        contentType: 'APP_OUTLOOK_CALENDAR',    icon: <BookImage size={22} color="#0078D4" /> },
   { label: 'Microsoft Excel',    sub: 'Spreadsheet',     contentType: 'APP_MICROSOFT_EXCEL',     icon: <FileSpreadsheet size={22} color="#217346" /> },
   { label: 'Power BI',           sub: 'Analytics',       contentType: 'APP_MICROSOFT_POWERBI',   icon: <BarChart3 size={22} color="#F2C811" /> },
-  { label: 'Zones',              sub: 'Layout',          contentType: 'APP_ZONES',               icon: <LayoutGrid size={22} color="#9C27B0" /> },
+  { label: 'PosterMyWall',       sub: 'Design',          contentType: 'APP_POSTER_MY_WALL',      icon: <BookImage size={22} color="#E85D04" /> },
 ];
 
 
-
-// ─── URL Input Modal (YouTube / Website etc.) ──────────────────────────────────
-
-function UrlInputModal({
-  label, placeholder, contentType, onAdd, onClose
-}: {
-  label: string;
-  placeholder: string;
-  contentType: string;
-  onAdd: (item: PlaylistItem) => void;
-  onClose: () => void;
-}) {
-  const [url, setUrl] = useState('');
-  const [name, setName] = useState('');
-
-  function add() {
-    if (!url.trim()) return;
-    onAdd({
-      id: `app_${Date.now()}`,
-      name: name.trim() || label,
-      thumbLink: '',
-      duration: 15,
-      contentType,
-      permaLink: url.trim(),
-    });
-    onClose();
-  }
-
-  let inputLabel = 'URL';
-  let inputPlaceholder = placeholder;
-  if (contentType === 'APP_WEATHER') {
-    inputLabel = 'City Name';
-    inputPlaceholder = 'e.g. London, UK';
-  } else if (contentType === 'APP_INSTAGRAM') {
-    inputLabel = 'Account Username';
-    inputPlaceholder = 'e.g. instagram_username';
-  } else if (contentType === 'APP_GOOGLE_CALENDAR') {
-    inputLabel = 'Google Calendar Embed URL';
-    inputPlaceholder = 'e.g. https://calendar.google.com/...';
-  } else if (contentType === 'APP_CANVA_PUBLIC') {
-    inputLabel = 'Canva Public View URL';
-  } else if (contentType === 'APP_GOOGLE_SHEET') {
-    inputLabel = 'Google Sheet URL';
-  } else if (contentType === 'APP_GOOGLE_SLIDE') {
-    inputLabel = 'Google Slide URL';
-  } else if (contentType === 'APP_OUTLOOK_CALENDAR') {
-    inputLabel = 'Outlook Calendar URL';
-  } else if (contentType === 'APP_MICROSOFT_EXCEL') {
-    inputLabel = 'Microsoft Excel URL';
-  } else if (contentType === 'APP_MICROSOFT_POWERBI') {
-    inputLabel = 'Power BI URL';
-  } else if (contentType === 'APP_ANNOUNCEMENT') {
-    inputLabel = 'Announcement Text';
-    inputPlaceholder = 'e.g. Welcome to our store!';
-  }
-
-  return (
-    <div className="pl-overlay" onClick={onClose}>
-      <div className="pl-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
-        <div className="pl-modal-hd">
-          <h3>Add {label}</h3>
-          <button className="pl-modal-x" onClick={onClose}><X size={16} /></button>
-        </div>
-        <div className="pl-modal-bd" style={{ gap: 14 }}>
-          <div>
-            <p className="pl-label">Label (optional)</p>
-            <input className="pl-input" value={name} onChange={e => setName(e.target.value)} placeholder={`e.g. My ${label}`} />
-          </div>
-          <div>
-            <p className="pl-label">{inputLabel}</p>
-            <input className="pl-input" value={url} onChange={e => setUrl(e.target.value)}
-              placeholder={inputPlaceholder} onKeyDown={e => e.key === 'Enter' && add()} autoFocus />
-          </div>
-        </div>
-        <div className="pl-modal-ft">
-          <button className="pl-btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="pl-btn-primary" onClick={add} disabled={!url.trim()}>Add</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Preview Modal ────────────────────────────────────────────────────────────
 
@@ -224,8 +130,9 @@ function extractYouTubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-function PreviewModal({ items, name, transition, onClose }: { items: PlaylistItem[]; name: string; transition: TransitionSettings; onClose: () => void }) {
-  const [idx, setIdx] = useState(0);
+function PreviewModal({ items, initialIndex = 0, name, transition, onClose }: { items: PlaylistItem[]; initialIndex?: number; name: string; transition: TransitionSettings; onClose: () => void }) {
+  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
+  const [idx, setIdx] = useState(initialIndex);
   const [animKey, setAnimKey] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
@@ -281,11 +188,20 @@ function PreviewModal({ items, name, transition, onClose }: { items: PlaylistIte
       || cur.contentType === 'APP_OUTLOOK_CALENDAR' || cur.contentType === 'APP_MICROSOFT_EXCEL'
       || cur.contentType === 'APP_MICROSOFT_POWERBI';
 
+    if (cur.contentType === 'APP_ANNOUNCEMENT') {
+      const meta = cur.metadata || {};
+      return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: meta.backgroundColor || '#000', color: meta.fontColor || '#fff', fontSize: '2rem', padding: '20px', textAlign: 'center' }}>
+          {meta.text || cur.name}
+        </div>
+      );
+    }
+
     if (isYT && ytId) {
       return (
         <iframe
           src={`https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0&rel=0`}
-          style={{ width: '100%', height: 360, border: 'none' }}
+          style={{ width: '100%', height: '100%', border: 'none' }}
           allow="autoplay; encrypted-media"
           title={cur.name}
         />
@@ -295,7 +211,7 @@ function PreviewModal({ items, name, transition, onClose }: { items: PlaylistIte
       return (
         <iframe
           src={cur.permaLink}
-          style={{ width: '100%', height: 360, border: 'none', background: '#fff' }}
+          style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
           title={cur.name}
           sandbox="allow-scripts allow-same-origin allow-forms"
         />
@@ -303,7 +219,7 @@ function PreviewModal({ items, name, transition, onClose }: { items: PlaylistIte
     }
     if (cur.thumbLink || cur.permaLink) {
       // eslint-disable-next-line @next/next/no-img-element
-      return <img src={cur.thumbLink || cur.permaLink} alt={cur.name} style={{ maxHeight: 360, maxWidth: '100%', objectFit: 'contain' }} />;
+      return <img src={cur.thumbLink || cur.permaLink} alt={cur.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;
     }
     return (
       <div style={{ color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
@@ -313,9 +229,25 @@ function PreviewModal({ items, name, transition, onClose }: { items: PlaylistIte
     );
   }
 
+  const isLandscape = orientation === 'landscape';
+
   return (
-    <div className="pl-overlay" onClick={onClose}>
-      <div className="pl-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 780, background: '#0a0a0a' }}>
+    <div className="pl-overlay" onClick={onClose} style={{ padding: '20px', overflowY: 'auto', display: 'flex', alignItems: 'center' }}>
+      <div 
+        className="pl-modal" 
+        onClick={e => e.stopPropagation()} 
+        style={{ 
+          width: '100%', 
+          maxWidth: isLandscape ? 1024 : 450, 
+          background: '#0a0a0a',
+          transition: 'max-width 0.4s ease-in-out',
+          margin: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: 12,
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+        }}
+      >
         {/* Header */}
         <div className="pl-modal-hd" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
           <div>
@@ -324,23 +256,56 @@ function PreviewModal({ items, name, transition, onClose }: { items: PlaylistIte
               {idx + 1} / {items.length} · {transition.type} · {transition.speed}
             </p>
           </div>
-          <button className="pl-modal-x" onClick={onClose} style={{ color: '#fff' }}><X size={16} /></button>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.1)', borderRadius: 6, overflow: 'hidden' }}>
+              <button 
+                onClick={() => setOrientation('landscape')} 
+                style={{ background: isLandscape ? 'var(--accent)' : 'transparent', color: '#fff', border: 'none', padding: '6px 12px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' }}
+              >
+                <Monitor size={14} /> Landscape
+              </button>
+              <button 
+                onClick={() => setOrientation('portrait')} 
+                style={{ background: !isLandscape ? 'var(--accent)' : 'transparent', color: '#fff', border: 'none', padding: '6px 12px', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s' }}
+              >
+                <Smartphone size={14} /> Portrait
+              </button>
+            </div>
+            <button className="pl-modal-x" onClick={onClose} style={{ color: '#fff' }}><X size={16} /></button>
+          </div>
         </div>
 
-        {/* Progress bar */}
-        <div style={{ height: 3, background: 'rgba(255,255,255,0.1)' }}>
-          <div style={{ height: '100%', width: `${progress}%`, background: 'var(--accent)', transition: 'width 0.1s linear' }} />
-        </div>
+        {/* Progress bar moved inside bezel */}
 
-        {/* Content Stage */}
-        <div style={{ background: '#111', minHeight: 360, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+        {/* Content Stage (Bezel) */}
+        <div style={{ 
+          background: '#000', 
+          width: '100%',
+          aspectRatio: isLandscape ? '16/9' : '9/16',
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          overflow: 'hidden', 
+          position: 'relative',
+          transition: 'aspect-ratio 0.4s ease-in-out',
+          boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8)',
+          borderBottom: '8px solid #111',
+          borderTop: '8px solid #111',
+          borderLeft: '8px solid #111',
+          borderRight: '8px solid #111',
+        }}>
           <div key={animKey} className={`pl-anim-${transition.type.toLowerCase()}`} style={{ animationDuration: `${speedMs}ms`, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {renderContent()}
+          </div>
+          
+          {/* Loader Progress Bar moving from one slide to the next */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 6, background: 'rgba(255,255,255,0.15)', zIndex: 50 }}>
+            <div style={{ height: '100%', width: `${progress}%`, background: 'var(--accent)', transition: 'width 0.1s linear' }} />
           </div>
         </div>
 
         {/* Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#0a0a0a', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
           <button onClick={goPrev} className="pl-chip" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.15)' }}>← Prev</button>
 
           <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
@@ -381,6 +346,67 @@ function PreviewModal({ items, name, transition, onClose }: { items: PlaylistIte
   );
 }
 
+// ─── Where Playing Modal ─────────────────────────────────────────────────────────
+
+function WherePlayingModal({ playlistId, onClose }: { playlistId: string | number | null; onClose: () => void }) {
+  const [screens, setScreens] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!playlistId || playlistId === 'new') {
+      setLoading(false);
+      return;
+    }
+    // Fetch screens mapped to this playlist
+    cmsApi.get(`/screen`)
+      .then(res => {
+        const mapped = res.data?.content?.filter((s: any) => 
+          s.playlistId === playlistId || s.defaultPlaylistId === playlistId || s.fallbackPlaylistId === playlistId
+        ) || [];
+        setScreens(mapped);
+      })
+      .catch(err => {
+        console.error('Failed to fetch screens:', err);
+        toast.error('Failed to load screens');
+      })
+      .finally(() => setLoading(false));
+  }, [playlistId]);
+
+  return (
+    <div className="pl-overlay" onClick={onClose} style={{ padding: '20px', zIndex: 1100 }}>
+      <div className="pl-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, background: '#0a0a0a', display: 'flex', flexDirection: 'column' }}>
+        <div className="pl-modal-hd" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+          <h3 style={{ color: '#fff' }}>Currently Playing On</h3>
+          <button className="pl-modal-x" onClick={onClose} style={{ color: '#fff' }}><X size={16} /></button>
+        </div>
+        <div style={{ padding: '20px', minHeight: '150px', display: 'flex', flexDirection: 'column' }}>
+          {loading ? (
+            <div style={{ margin: 'auto', color: 'rgba(255,255,255,0.5)' }}>Loading...</div>
+          ) : screens.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {screens.map(s => (
+                <div key={s.id} style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <Tv size={20} color="var(--accent)" />
+                  <div>
+                    <div style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 600 }}>{s.screenName || s.name}</div>
+                    <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>{s.location || 'No Location'}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ margin: 'auto', color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+              <Tv size={32} style={{ opacity: 0.3, marginBottom: '8px' }} />
+              <p style={{ margin: 0 }}>This playlist is not currently assigned to any screens.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ─── Main Editor Page ─────────────────────────────────────────────────────────
 
 export default function PlaylistEditorPage() {
@@ -394,14 +420,20 @@ export default function PlaylistEditorPage() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('New Playlist');
   const [items, setItems] = useState<PlaylistItem[]>([]);
-  const [transition, setTransition] = useState<TransitionSettings>({ type: 'SLIDE', speed: 'MEDIUM' });
+  const [transition, setTransition] = useState<TransitionSettings>({ type: 'NONE', speed: 'MEDIUM' });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
 
   // UI modals
   const [showTransition, setShowTransition] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [urlModal, setUrlModal] = useState<{ label: string; placeholder: string; contentType: string } | null>(null);
+  const [showPreview, setShowPreview] = useState<{ isOpen: boolean; initialIndex?: number }>({ isOpen: false });
+  const [showWherePlaying, setShowWherePlaying] = useState(false);
+  const [activeAppModal, setActiveAppModal] = useState<{
+    contentType: string;
+    editIndex?: number;
+    initialData?: any;
+    label?: string;
+  } | null>(null);
 
   // Sidebar
   const [sideTab, setSideTab] = useState<'Images' | 'Videos' | 'Apps'>('Images');
@@ -529,6 +561,42 @@ export default function PlaylistEditorPage() {
     e.dataTransfer.effectAllowed = 'copy';
   }
 
+  function getSafeThumbnailUrl(item: PlaylistItem) {
+    if (item.contentType === 'APP_YOUTUBE' && item.permaLink) {
+      const id = extractYouTubeId(item.permaLink);
+      if (id) return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+    }
+
+    if (item.thumbLink && !item.thumbLink.includes('../assets')) {
+      return item.thumbLink;
+    }
+    
+    if (item.permaLink && !item.contentType?.startsWith('APP_')) return item.permaLink;
+
+    return null;
+  }
+
+  function handleEditItemClick(item: PlaylistItem, idx: number) {
+    const requiresInput = [
+      'APP_YOUTUBE', 'APP_HTML', 'APP_CANVA_PUBLIC', 'APP_GOOGLE_SHEET',
+      'APP_GOOGLE_SLIDE', 'APP_OUTLOOK_CALENDAR', 'APP_MICROSOFT_EXCEL',
+      'APP_MICROSOFT_POWERBI', 'APP_WEATHER', 'APP_INSTAGRAM', 'APP_GOOGLE_CALENDAR',
+      'APP_POSTER_MY_WALL'
+    ].includes(item.contentType || '');
+
+    if (item.contentType?.startsWith('APP_')) {
+      const appDef = APP_ITEMS.find(a => a.contentType === item.contentType);
+      setActiveAppModal({
+        contentType: item.contentType,
+        editIndex: idx,
+        initialData: item.metadata || { permaLink: item.permaLink, url: item.permaLink, name: item.name },
+        label: appDef?.label || 'App'
+      });
+    } else if (!item.contentType?.startsWith('APP_')) {
+      setShowPreview({ isOpen: true, initialIndex: idx });
+    }
+  }
+
   function onPlaylistDrop(e: React.DragEvent) {
     e.preventDefault();
     const data = e.dataTransfer.getData('application/json');
@@ -536,7 +604,7 @@ export default function PlaylistEditorPage() {
       try {
         const asset = JSON.parse(data);
         if (asset && asset.isApp) {
-          addAppItem({ id: `app_${Date.now()}`, name: asset.label, duration: 15, contentType: asset.contentType });
+          setActiveAppModal({ contentType: asset.contentType, label: asset.label });
         } else if (asset && asset.id) {
           addItem(asset);
         }
@@ -648,7 +716,8 @@ export default function PlaylistEditorPage() {
         fontColor: '#ffffff',
         backgroundColor: '#920a75',
         transitionSpeed: 'Medium',
-        template: 'Image with text on left'
+        template: 'Image with text on left',
+        ...(item.metadata || {})
       };
       body.format = 'html';
     } else if (item.contentType === 'APP_GOOGLE_CALENDAR') {
@@ -664,7 +733,8 @@ export default function PlaylistEditorPage() {
         language: 'en',
         weekStartDay: '1',
         timezone: 'UTC',
-        refreshInterval: 5
+        refreshInterval: 5,
+        ...(item.metadata || {})
       };
       body.format = 'html';
       body.assetSourceType = 'GOOGLE_CALENDAR';
@@ -672,13 +742,14 @@ export default function PlaylistEditorPage() {
       body.metadata = {
         zones: [
           { id: 1, name: 'Zone 1', x: 0, y: 0, w: 100, h: 100 }
-        ]
+        ],
+        ...(item.metadata || {})
       };
       body.format = 'html';
     } else if (item.contentType === 'APP_YOUTUBE') {
       body.format = 'youtube_video';
       body.assetSourceType = 'youtube';
-      body.metadata = { isMuted: true };
+      body.metadata = { isMuted: true, ...(item.metadata || {}) };
     } else if (item.contentType === 'APP_HTML') {
       body.format = 'WEBSITE';
       body.assetSourceType = 'website';
@@ -694,7 +765,8 @@ export default function PlaylistEditorPage() {
         url: item.permaLink,
         embedUrl: item.permaLink,
         designId: 'Design',
-        type: 'canva_public_view'
+        type: 'canva_public_view',
+        ...(item.metadata || {})
       };
     } else if (item.contentType === 'APP_GOOGLE_SHEET') {
       body.format = 'html';
@@ -703,7 +775,8 @@ export default function PlaylistEditorPage() {
         url: item.permaLink,
         embedUrl: item.permaLink,
         sheetId: 'Sheet',
-        type: 'google_sheet'
+        type: 'google_sheet',
+        ...(item.metadata || {})
       };
     } else if (item.contentType === 'APP_GOOGLE_SLIDE') {
       body.format = 'html';
@@ -713,20 +786,21 @@ export default function PlaylistEditorPage() {
         embedUrl: item.permaLink,
         slideId: 'Slide',
         type: 'google_slide',
-        delay: 10
+        delay: 10,
+        ...(item.metadata || {})
       };
     } else if (item.contentType === 'APP_OUTLOOK_CALENDAR') {
       body.format = 'html';
       body.assetSourceType = 'APP_OUTLOOK_CALENDAR';
-      body.metadata = { url: item.permaLink, embedUrl: item.permaLink };
+      body.metadata = { url: item.permaLink, embedUrl: item.permaLink, ...(item.metadata || {}) };
     } else if (item.contentType === 'APP_MICROSOFT_EXCEL') {
       body.format = 'html';
       body.assetSourceType = 'MICROSOFT_EXCEL';
-      body.metadata = { url: item.permaLink, embedUrl: item.permaLink };
+      body.metadata = { url: item.permaLink, embedUrl: item.permaLink, ...(item.metadata || {}) };
     } else if (item.contentType === 'APP_MICROSOFT_POWERBI') {
       body.format = 'html';
       body.assetSourceType = 'APP_MICROSOFT_POWERBI';
-      body.metadata = { url: item.permaLink, embedUrl: item.permaLink };
+      body.metadata = { url: item.permaLink, embedUrl: item.permaLink, ...(item.metadata || {}) };
     } else if (item.contentType === 'APP_ANNOUNCEMENT') {
       body.format = 'HTML';
       body.assetSourceType = '';
@@ -736,7 +810,8 @@ export default function PlaylistEditorPage() {
         fontColor: '#ffffff',
         backgroundColor: '#000000',
         scrollingSpeed: 'Normal',
-        direction: 'Left'
+        direction: 'Left',
+        ...(item.metadata || {})
       };
     }
 
@@ -828,10 +903,7 @@ export default function PlaylistEditorPage() {
     e.target.value = '';
   }
 
-  // ── App quick-add helpers ──
-  function openUrl(label: string, placeholder: string, contentType: string) {
-    setUrlModal({ label, placeholder, contentType });
-  }
+
 
   if (loading) {
     return (
@@ -882,7 +954,11 @@ export default function PlaylistEditorPage() {
 
         {/* Action buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="ple-action-btn" onClick={() => setShowPreview(true)} title="Preview" disabled={items.length === 0}>
+          <button className="ple-action-btn" onClick={() => setShowWherePlaying(true)} title="Currently Playing">
+            <Tv size={15} />
+            <span>Where Playing</span>
+          </button>
+          <button className="ple-action-btn" onClick={() => setShowPreview({ isOpen: true, initialIndex: 0 })} disabled={items.length === 0}>
             <Eye size={15} />
             <span>Preview</span>
           </button>
@@ -925,17 +1001,27 @@ export default function PlaylistEditorPage() {
                   <span className="ple-item-idx">{idx + 1}</span>
 
                   {/* Thumbnail */}
-                  <div className="ple-thumb">
-                    {item.thumbLink ? (
+                  <div className="ple-thumb" onClick={() => {
+                    if (!item.contentType?.startsWith('APP_')) {
+                      setShowPreview({ isOpen: true, initialIndex: idx });
+                    } else {
+                      handleEditItemClick(item, idx);
+                    }
+                  }} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Click to edit">
+                    {getSafeThumbnailUrl(item) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.thumbLink} alt={item.name} />
+                      <img src={getSafeThumbnailUrl(item)!} alt={item.name} />
+                    ) : item.contentType?.startsWith('APP_') ? (
+                      <div style={{ width: '100%', height: '100%', backgroundColor: '#2a2a2a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 600 }}>
+                        {item.name ? item.name.charAt(0).toUpperCase() : 'A'}
+                      </div>
                     ) : (
                       <ImageIcon size={18} style={{ opacity: 0.3 }} />
                     )}
                   </div>
 
                   {/* Info */}
-                  <div className="ple-item-info">
+                  <div className="ple-item-info" onClick={() => handleEditItemClick(item, idx)} style={{ cursor: 'pointer' }} title="Click to edit">
                     <p className="ple-item-name">{item.name}</p>
                     <p className="ple-item-meta">{secsToHHMMSS(item.duration || 0)}</p>
                   </div>
@@ -998,7 +1084,8 @@ export default function PlaylistEditorPage() {
                   const requiresInput = [
                     'APP_YOUTUBE', 'APP_HTML', 'APP_CANVA_PUBLIC', 'APP_GOOGLE_SHEET',
                     'APP_GOOGLE_SLIDE', 'APP_OUTLOOK_CALENDAR', 'APP_MICROSOFT_EXCEL',
-                    'APP_MICROSOFT_POWERBI', 'APP_WEATHER', 'APP_INSTAGRAM', 'APP_GOOGLE_CALENDAR'
+                    'APP_MICROSOFT_POWERBI', 'APP_WEATHER', 'APP_INSTAGRAM', 'APP_GOOGLE_CALENDAR',
+                    'APP_POSTER_MY_WALL'
                   ].includes(app.contentType);
 
                   return (
@@ -1016,13 +1103,7 @@ export default function PlaylistEditorPage() {
                       </div>
                       <button
                         className="ple-add-btn"
-                        onClick={() => {
-                          if (requiresInput) {
-                            openUrl(app.label, 'https://...', app.contentType);
-                          } else {
-                            addAppItem({ id: `app_${Date.now()}`, name: app.label, duration: 15, contentType: app.contentType });
-                          }
-                        }}
+                        onClick={() => setActiveAppModal({ contentType: app.contentType, label: app.label })}
                       >
                         <Plus size={14} />
                       </button>
@@ -1079,18 +1160,57 @@ export default function PlaylistEditorPage() {
         />
       )}
 
-      {showPreview && items.length > 0 && (
-        <PreviewModal items={items} name={playlistName} transition={transition} onClose={() => setShowPreview(false)} />
+      {showPreview.isOpen && (
+        <PreviewModal
+          items={items}
+          initialIndex={showPreview.initialIndex}
+          name={playlistName}
+          transition={transition}
+          onClose={() => setShowPreview({ isOpen: false })}
+        />
       )}
 
-      {urlModal && (
-        <UrlInputModal
-          label={urlModal.label}
-          placeholder={urlModal.placeholder}
-          contentType={urlModal.contentType}
-          onAdd={item => addAppItem(item)}
-          onClose={() => setUrlModal(null)}
+      {showWherePlaying && (
+        <WherePlayingModal
+          playlistId={playlistId}
+          onClose={() => setShowWherePlaying(false)}
         />
+      )}
+
+      {activeAppModal && (
+        (() => {
+          const commonProps = {
+            editIndex: activeAppModal.editIndex,
+            initialData: activeAppModal.initialData,
+            onAdd: (item: PlaylistItem) => addAppItem(item),
+            onEdit: (idx: number, item: PlaylistItem) => {
+              setItems(prev => {
+                const copy = [...prev];
+                copy[idx] = { ...copy[idx], name: item.name, permaLink: item.permaLink, metadata: item.metadata };
+                return copy;
+              });
+            },
+            onClose: () => setActiveAppModal(null)
+          };
+
+          switch (activeAppModal.contentType) {
+            case 'APP_ZONES': return <ZonesEditorModal {...commonProps} />;
+            case 'APP_WEATHER': return <WeatherAppModal {...commonProps} />;
+            case 'APP_ANNOUNCEMENT': return <AnnouncementAppModal {...commonProps} />;
+            case 'APP_YOUTUBE': return <YoutubeAppModal {...commonProps} />;
+            case 'APP_INSTAGRAM': return <InstagramAppModal {...commonProps} />;
+            case 'APP_CANVA_PUBLIC': return <CanvaPublicAppModal {...commonProps} />;
+            case 'APP_GOOGLE_SHEET': return <GoogleSheetAppModal {...commonProps} />;
+            case 'APP_GOOGLE_SLIDE': return <GoogleSlideAppModal {...commonProps} />;
+            case 'APP_GOOGLE_CALENDAR': return <GoogleCalendarAppModal {...commonProps} />;
+            case 'APP_MICROSOFT_EXCEL': return <MicrosoftExcelAppModal {...commonProps} />;
+            case 'APP_MICROSOFT_POWERBI': return <MicrosoftPowerBiAppModal {...commonProps} />;
+            case 'APP_OUTLOOK_CALENDAR': return <OutlookCalendarAppModal {...commonProps} />;
+            case 'APP_POSTER_MY_WALL': return <PosterMyWallAppModal {...commonProps} />;
+            case 'APP_HTML': return <WebsiteAppModal {...commonProps} />;
+            default: return null;
+          }
+        })()
       )}
 
       {/* ── Styles ─────────────────────────────────────────────────────── */}
