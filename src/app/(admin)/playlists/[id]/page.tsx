@@ -190,8 +190,24 @@ function PreviewModal({ items, initialIndex = 0, name, transition, onClose }: { 
 
     if (cur.contentType === 'APP_ANNOUNCEMENT') {
       const meta = cur.metadata || {};
+      const align = meta.textAlign || 'center';
+      const vAlign = meta.verticalAlign || 'middle';
+      const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
+      const alignItems = vAlign === 'top' ? 'flex-start' : vAlign === 'bottom' ? 'flex-end' : 'center';
+      
+      let finalFontSize = 2.5;
+      if (meta.fontSize) {
+        const parsed = parseFloat(meta.fontSize);
+        if (!isNaN(parsed)) {
+          // If the font size is very large (e.g., old angular app used pixels like 50px), convert it to rem
+          finalFontSize = parsed > 10 ? parsed / 16 : parsed;
+        }
+      }
+      const fontSizeStr = `${finalFontSize}rem`;
+      const fontFamily = meta.font || 'Inter';
+      
       return (
-        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: meta.backgroundColor || '#000', color: meta.fontColor || '#fff', fontSize: '2rem', padding: '20px', textAlign: 'center' }}>
+        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems, justifyContent: justify, backgroundColor: meta.backgroundColor || '#000', color: meta.fontColor || '#fff', fontSize: fontSizeStr, fontFamily, fontWeight: 600, padding: '40px', textAlign: align, overflow: 'hidden', wordBreak: 'break-word' }}>
           {meta.text || cur.name}
         </div>
       );

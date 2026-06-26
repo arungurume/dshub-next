@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { PreviewTVBezel } from './PreviewTVBezel';
 import { PlaylistItem } from '@/types/playlist';
 
 const Youtube = ({ size = 24, strokeWidth = 2, ...props }: React.SVGProps<SVGSVGElement> & { size?: number, strokeWidth?: number }) => (
@@ -82,33 +83,28 @@ export function YoutubeAppModal({ editIndex, initialData, onAdd, onEdit, onClose
             </div>
           </div>
 
-          {/* Right Preview */}
-          <div style={{ flex: 1, backgroundColor: '#0a0a0a', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>
-              Live Preview
-            </div>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', position: 'relative' }}>
-              {videoId ? (
-                <iframe
-                  width="100%"
-                  height="100%"
-                  src={`https://www.youtube.com/embed/${videoId}?autoplay=0&mute=${isMuted ? 1 : 0}`}
-                  title="YouTube video player"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-                ></iframe>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.3)' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '24px', borderRadius: '50%', marginBottom: '16px' }}>
-                    <Youtube size={48} strokeWidth={1.5} />
-                  </div>
-                  <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)' }}>Enter a valid YouTube URL to see preview</p>
+          {/* Right Preview - LED TV Style */}
+          <PreviewTVBezel>
+            {videoId ? (
+              <iframe
+                width="100%"
+                height="100%"
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=0&mute=${isMuted ? 1 : 0}`}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              ></iframe>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.3)' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '24px', borderRadius: '50%', marginBottom: '16px' }}>
+                  <Youtube size={48} strokeWidth={1.5} />
                 </div>
-              )}
-            </div>
-          </div>
+                <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)' }}>Enter a valid YouTube URL</p>
+              </div>
+            )}
+          </PreviewTVBezel>
         </div>
         <div className="pl-modal-ft">
           <button className="pl-btn-ghost" onClick={onClose}>Cancel</button>

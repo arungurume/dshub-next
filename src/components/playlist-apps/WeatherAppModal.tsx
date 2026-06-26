@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, CloudSun } from 'lucide-react';
+import { PreviewTVBezel } from './PreviewTVBezel';
 import { PlaylistItem } from '@/types/playlist';
 
 function mapWeatherCode(code: number) {
@@ -144,12 +145,9 @@ export function WeatherAppModal({ editIndex, initialData, onAdd, onEdit, onClose
             </div>
           </div>
 
-          {/* Right Preview */}
-          <div style={{ flex: 1, backgroundColor: '#0a0a0a', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.03)', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>
-              Live Preview
-            </div>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+          {/* Right Preview - LED TV Style */}
+          <PreviewTVBezel>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', position: 'relative' }}>
               {isLoading ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fff', opacity: 0.8 }}>
                   <Loader2 className="animate-spin" size={40} style={{ marginBottom: 16 }} />
@@ -204,17 +202,17 @@ export function WeatherAppModal({ editIndex, initialData, onAdd, onEdit, onClose
                         );
                       })
                     ) : (
-                      [1, 2, 3].map((dayIdx, i) => {
-                        const min = weatherData.daily.temperature_2m_min[dayIdx];
-                        const max = weatherData.daily.temperature_2m_max[dayIdx];
-                        const code = weatherData.daily.weathercode[dayIdx];
-                        const dateStr = weatherData.daily.time[dayIdx];
-                        const dayName = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' });
+                      [1, 2, 3].map((dayOffset, i) => {
+                        const maxT = weatherData.daily.temperature_2m_max[dayOffset];
+                        const code = weatherData.daily.weathercode[dayOffset];
+                        const timeStr = weatherData.daily.time[dayOffset];
+                        const date = new Date(timeStr);
+                        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                         return (
                           <div key={i} style={{ textAlign: 'center' }}>
                             <p style={{ margin: '0 0 8px', fontSize: '0.8rem', opacity: 0.8 }}>{dayName}</p>
                             <div style={{ margin: '4px 0' }}>{mapWeatherCode(code).icon}</div>
-                            <p style={{ margin: 0, fontWeight: 600, fontSize: '0.85rem' }}>{getTemperature(min)}°/{getTemperature(max)}°</p>
+                            <p style={{ margin: 0, fontWeight: 600 }}>{getTemperature(maxT)}°</p>
                           </div>
                         );
                       })
@@ -223,7 +221,7 @@ export function WeatherAppModal({ editIndex, initialData, onAdd, onEdit, onClose
                 </div>
               )}
             </div>
-          </div>
+          </PreviewTVBezel>
         </div>
         <div className="pl-modal-ft">
           <button className="pl-btn-ghost" onClick={onClose}>Cancel</button>
