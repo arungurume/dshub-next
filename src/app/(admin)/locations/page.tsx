@@ -10,6 +10,8 @@ import {
 import { omsApi, umsApi } from '@/lib/api';
 import { useDSStore } from '@/store/useDSStore';
 import { useLanguage } from '@/context/LanguageContext';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useUpgradeModal } from '@/hooks/useUpgradeModal';
 
 
 interface Location {
@@ -67,6 +69,7 @@ export default function LocationsPage() {
   const [confirm, setConfirm] = useState<{
     title: string; message: string; label: string; danger?: boolean; action: () => void;
   } | null>(null);
+  const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
 
   useEffect(() => {
     setUserRole(localStorage.getItem('role') || '');
@@ -87,8 +90,9 @@ export default function LocationsPage() {
   }, [orgId, t]);
 
   function handleAddNew() {
+    // Angular: show upgrade dialog if already has >= 1 location (free tier = 1 location)
     if (locations.length >= 1) {
-      toast.info(t('LOCATIONS.upgrade_toast'));
+      openUpgrade('location');
       return;
     }
     router.push('/locations/0');
@@ -424,6 +428,7 @@ export default function LocationsPage() {
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
+      {upgradeModal && <UpgradeModal mode={upgradeModal} onClose={closeUpgrade} />}
     </div>
   );
 }

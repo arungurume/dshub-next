@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { cmsApi, cmsApiV2, umsApi, setCookie } from '@/lib/api';
 import { toast } from 'sonner';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useUpgradeModal } from '@/hooks/useUpgradeModal';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
@@ -294,7 +296,9 @@ export default function DashboardMainPage() {
   const [credits, setCredits] = useState<{ total: number; used: number } | null>(null);
   const [buyingId, setBuyingId] = useState<number | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
   const [purchasedIds, setPurchasedIds] = useState<Set<number>>(new Set());
+  const [confirmUnlock, setConfirmUnlock] = useState<DsTemplate | null>(null);
 
   // Subscription info
   const [subPlan, setSubPlan] = useState<any>(null);
@@ -573,7 +577,7 @@ export default function DashboardMainPage() {
                     <Sparkles size={14} />
                     <span>Browse Templates</span>
                   </button>
-                  <button onClick={() => setShowCreditModal(true)} className="db-cta-buy-credits">
+                  <button onClick={() => openUpgrade('credit')} className="db-cta-buy-credits">
                     <Coins size={14} />
                     <span>Buy Credits</span>
                   </button>
@@ -767,7 +771,11 @@ export default function DashboardMainPage() {
                               <span>Use</span>
                             </button>
                           ) : (
-                            <button className="db-btn-card-action buy" onClick={() => buyTemplate(tpl)} disabled={buyingId !== null}>
+                            <button
+                              className="db-btn-card-action buy"
+                              onClick={() => setConfirmUnlock(tpl)}
+                              disabled={buyingId !== null}
+                            >
                               {buyingId === tpl.id ? <Loader2 size={12} className="db-spin" /> : <Lock size={12} />}
                               <span>Unlock Template</span>
                             </button>
@@ -781,47 +789,47 @@ export default function DashboardMainPage() {
             )}
           </div>
 
-          {/* 3. RECOMMENDED TEMPLATES */}
-          <div className="db-discovery-panel">
-            <h3 className="db-discovery-title-small">Recommended for You</h3>
+          {/* 3. RECOMMENDED TEMPLATES — hidden when all unlocked */}
+          {(galleryLoading || recommendedTemplates.length > 0) && (
+            <div className="db-discovery-panel">
+              <h3 className="db-discovery-title-small">Recommended for You</h3>
 
-            {galleryLoading ? (
-              <div className="db-slider-loading-grid">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="db-skeleton-card" />
-                ))}
-              </div>
-            ) : recommendedTemplates.length === 0 ? (
-              <p className="db-empty-discovery">All templates unlocked!</p>
-            ) : (
-              <div className="db-horizontal-recommended-row">
-                {recommendedTemplates.map((tpl) => {
-                  const cost = tpl.creditCost ?? 0;
-                  const isVertical = tpl.width && tpl.height ? tpl.height > tpl.width : false;
-                  const isSquare = tpl.width && tpl.height ? tpl.height === tpl.width : false;
-                  const orientationLabel = isVertical ? 'Portrait' : (isSquare ? 'Square' : 'Landscape');
+              {galleryLoading ? (
+                <div className="db-slider-loading-grid">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="db-skeleton-card" />
+                  ))}
+                </div>
+              ) : (
+                <div className="db-horizontal-recommended-row">
+                  {recommendedTemplates.map((tpl) => {
+                    const cost = tpl.creditCost ?? 0;
+                    const isVertical = tpl.width && tpl.height ? tpl.height > tpl.width : false;
+                    const isSquare = tpl.width && tpl.height ? tpl.height === tpl.width : false;
+                    const orientationLabel = isVertical ? 'Portrait' : (isSquare ? 'Square' : 'Landscape');
 
-                  return (
-                    <div key={tpl.id} className="db-recommended-card-item" onClick={() => setPreviewTemplate(tpl)}>
-                      <div className="db-recommended-thumb-area">
-                        {getThumb(tpl) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={getThumb(tpl)!} alt={tpl.title} className="db-recommended-img" />
-                        ) : (
-                          <div className="db-slider-placeholder"><Sparkles size={20} opacity={0.2} /></div>
-                        )}
-                        <span className="db-recommended-orient-lbl">{orientationLabel}</span>
-                        <span className="db-recommended-cost-lbl">{cost === 0 ? 'Free' : `${cost} cr`}</span>
+                    return (
+                      <div key={tpl.id} className="db-recommended-card-item" onClick={() => setPreviewTemplate(tpl)}>
+                        <div className="db-recommended-thumb-area">
+                          {getThumb(tpl) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={getThumb(tpl)!} alt={tpl.title} className="db-recommended-img" />
+                          ) : (
+                            <div className="db-slider-placeholder"><Sparkles size={20} opacity={0.2} /></div>
+                          )}
+                          <span className="db-recommended-orient-lbl">{orientationLabel}</span>
+                          <span className="db-recommended-cost-lbl">{cost === 0 ? 'Free' : `${cost} cr`}</span>
+                        </div>
+                        <div className="db-recommended-info">
+                          <p className="db-recommended-title">{tpl.title}</p>
+                        </div>
                       </div>
-                      <div className="db-recommended-info">
-                        <p className="db-recommended-title">{tpl.title}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 4. CMS OPERATIONS (at the bottom for existing users) */}
           {!isNewUser && (
@@ -889,7 +897,7 @@ export default function DashboardMainPage() {
                 <p className="db-credits-estimate">Enough for approximately {Math.max(1, estimatedTemplates)}–{Math.max(2, estimatedTemplates + Math.ceil(estimatedTemplates * 0.5))} premium templates</p>
               )}
 
-              <button onClick={() => setShowCreditModal(true)} className="db-widget-buy-btn" id="dash-buy-credits-btn">
+              <button onClick={() => openUpgrade('credit')} className="db-widget-buy-btn" id="dash-buy-credits-btn">
                 <Coins size={13} />
                 <span>Buy More Credits</span>
               </button>
@@ -1269,9 +1277,9 @@ export default function DashboardMainPage() {
         }
 
         .db-stat-chip-icon.green { background: rgba(34, 197, 94, 0.08); color: #22c55e; }
-        .db-stat-chip-icon.purple { background: rgba(125, 42, 232, 0.08); color: #7d2ae8; }
+        .db-stat-chip-icon.purple { background: rgba(17, 17, 17, 0.06); color: #374151; }
         .db-stat-chip-icon.pink { background: rgba(236, 72, 153, 0.08); color: #ec4899; }
-        .db-stat-chip-icon.indigo { background: rgba(79, 70, 229, 0.08); color: #4f46e5; }
+        .db-stat-chip-icon.indigo { background: rgba(55, 65, 81, 0.08); color: #374151; }
 
         .db-stat-chip-info {
           display: flex;
@@ -1787,9 +1795,9 @@ export default function DashboardMainPage() {
           flex-shrink: 0;
         }
 
-        .db-ops-icon.purple { background: rgba(125, 42, 232, 0.08); color: #7d2ae8; }
+        .db-ops-icon.purple { background: rgba(17, 17, 17, 0.06); color: #374151; }
         .db-ops-icon.pink { background: rgba(236, 72, 153, 0.08); color: #ec4899; }
-        .db-ops-icon.indigo { background: rgba(79, 70, 229, 0.08); color: #4f46e5; }
+        .db-ops-icon.indigo { background: rgba(55, 65, 81, 0.08); color: #374151; }
         .db-ops-icon.green { background: rgba(34, 197, 94, 0.08); color: #22c55e; }
 
         .db-ops-texts {
@@ -1963,9 +1971,9 @@ export default function DashboardMainPage() {
         }
 
         .db-widget-stat-icon.green { background: rgba(34, 197, 94, 0.07); color: #22c55e; }
-        .db-widget-stat-icon.purple { background: rgba(125, 42, 232, 0.07); color: #7d2ae8; }
+        .db-widget-stat-icon.purple { background: rgba(17, 17, 17, 0.06); color: #374151; }
         .db-widget-stat-icon.orange { background: rgba(245, 158, 11, 0.07); color: #f59e0b; }
-        .db-widget-stat-icon.indigo { background: rgba(79, 70, 229, 0.07); color: #4f46e5; }
+        .db-widget-stat-icon.indigo { background: rgba(55, 65, 81, 0.08); color: #374151; }
 
         .db-widget-stat-label {
           font-size: 0.65rem;
@@ -1979,7 +1987,7 @@ export default function DashboardMainPage() {
         }
 
         .db-widget-stat-val.green-text { color: #22c55e; }
-        .db-widget-stat-val.purple-text { color: #7d2ae8; }
+        .db-widget-stat-val.purple-text { color: #111; }
 
         .db-widget-spinner {
           width: 12px;
@@ -2481,7 +2489,7 @@ export default function DashboardMainPage() {
         .dbc-modal-hd {
           display: flex; align-items: center; justify-content: space-between;
           padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
-          background: linear-gradient(135deg, rgba(99,102,241,.1), rgba(139,92,246,.07));
+          background: linear-gradient(135deg, rgba(17,17,17,.04), rgba(55,65,81,.03));
         }
         .dbc-modal-hd-left { display: flex; align-items: center; gap: .85rem; }
         .dbc-modal-icon {
@@ -2512,11 +2520,11 @@ export default function DashboardMainPage() {
           transition: all .2s; position: relative; color: var(--text);
         }
         .dbc-pack-card:hover:not(:disabled) {
-          border-color: var(--accent); background: rgba(99,102,241,.06);
-          transform: translateY(-2px); box-shadow: 0 6px 24px rgba(99,102,241,.15);
+          border-color: #111; background: rgba(17,17,17,.04);
+          transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.08);
         }
         .dbc-pack-card:disabled { opacity: .65; cursor: not-allowed; }
-        .dbc-pack-loading { border-color: var(--accent) !important; }
+        .dbc-pack-loading { border-color: #111 !important; }
 
         .dbc-pack-badge {
           position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
@@ -2539,7 +2547,7 @@ export default function DashboardMainPage() {
         }
         .dbc-pack-spinner {
           display: flex; align-items: center; gap: .35rem;
-          font-size: .75rem; color: var(--accent); margin-top: .35rem;
+          font-size: .75rem; color: #374151; margin-top: .35rem;
         }
 
         .dbc-pack-summary {
@@ -2548,7 +2556,7 @@ export default function DashboardMainPage() {
           border-radius: 12px; padding: .75rem 1rem;
           margin-bottom: 1.25rem; font-size: .875rem; color: var(--text-muted);
         }
-        .dbc-pack-summary svg { color: var(--accent); flex-shrink: 0; }
+        .dbc-pack-summary svg { color: #374151; flex-shrink: 0; }
 
         .dbc-pack-note {
           display: flex; align-items: center; gap: .4rem;
@@ -2561,7 +2569,7 @@ export default function DashboardMainPage() {
         .dbc-field { display: flex; flex-direction: column; gap: .4rem; }
         .dbc-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
         .dbc-stripe-el { background: var(--sidebar-bg); border: 1px solid var(--border); border-radius: 10px; padding: .75rem 1rem; }
-        .dbc-stripe-el:focus-within { border-color: var(--accent); }
+        .dbc-stripe-el:focus-within { border-color: #111; }
         .dbc-field-err { font-size: .75rem; color: #ef4444; margin: 0; }
         .dbc-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         .dbc-form-footer { display: flex; align-items: center; justify-content: space-between; padding-top: .5rem; }
@@ -2581,13 +2589,82 @@ export default function DashboardMainPage() {
           font-size: .875rem; cursor: pointer; transition: all .15s;
         }
         .dbc-btn-ghost:hover { background: var(--sidebar-bg); }
+
+        /* Unlock confirm popup */
+        .unlock-confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 9000; display: flex; align-items: center; justify-content: center; }
+        .unlock-confirm-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 1.75rem; width: 360px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+        .unlock-confirm-icon { width: 52px; height: 52px; border-radius: 14px; background: rgba(17,17,17,.08); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem; }
+        .unlock-confirm-title { text-align: center; font-size: 1.05rem; font-weight: 700; margin: 0 0 .25rem; }
+        .unlock-confirm-sub { text-align: center; font-size: .82rem; color: var(--text-muted); margin: 0 0 1.25rem; }
+        .unlock-confirm-breakdown { background: var(--sidebar-bg); border-radius: 12px; padding: .9rem 1rem; display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1.25rem; }
+        .unlock-confirm-row { display: flex; justify-content: space-between; font-size: .83rem; }
+        .unlock-confirm-row.cost { color: #ef4444; font-weight: 600; }
+        .unlock-confirm-row.after { color: #16a34a; font-weight: 700; border-top: 1px solid var(--border); padding-top: .5rem; margin-top: .1rem; }
+        .unlock-confirm-divider { border: none; border-top: 1px solid var(--border); }
+        .unlock-confirm-actions { display: flex; gap: .75rem; }
+        .unlock-confirm-actions .btn-cancel { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text); padding: .6rem; border-radius: 10px; font-size: .85rem; cursor: pointer; }
+        .unlock-confirm-actions .btn-cancel:hover { background: var(--sidebar-bg); }
+        .unlock-confirm-actions .btn-confirm { flex: 2; background: #111; color: #fff; border: none; padding: .65rem; border-radius: 10px; font-size: .85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .4rem; }
+        .unlock-confirm-actions .btn-confirm:hover { background: #222; }
+        .unlock-confirm-actions .btn-confirm:disabled { opacity: .65; cursor: not-allowed; }
       `}</style>
 
-      {/* Credit Buy Modal */}
-      {showCreditModal && (
-        <CreditBuyModal
-          onClose={() => setShowCreditModal(false)}
-          onSuccess={() => { loadCredits(); }}
+      {/* Unlock Confirm Popup */}
+      {confirmUnlock && (() => {
+        const cost = confirmUnlock.creditCost ?? 0;
+        const available = credits ? credits.total - credits.used : 0;
+        const afterUnlock = available - cost;
+        return (
+          <div className="unlock-confirm-overlay" onClick={() => setConfirmUnlock(null)}>
+            <div className="unlock-confirm-card" onClick={(e) => e.stopPropagation()}>
+              <div className="unlock-confirm-icon">🔓</div>
+              <h3 className="unlock-confirm-title">Unlock Template</h3>
+              <p className="unlock-confirm-sub">"{confirmUnlock.title}"</p>
+              <div className="unlock-confirm-breakdown">
+                <div className="unlock-confirm-row">
+                  <span>Your credits</span>
+                  <strong>{available} Credits</strong>
+                </div>
+                <div className="unlock-confirm-row cost">
+                  <span>Unlock cost</span>
+                  <strong>− {cost} Credits</strong>
+                </div>
+                <hr className="unlock-confirm-divider" />
+                <div className="unlock-confirm-row after">
+                  <span>After unlock</span>
+                  <strong>{afterUnlock} Credits</strong>
+                </div>
+              </div>
+              <div className="unlock-confirm-actions">
+                <button className="btn-cancel" onClick={() => setConfirmUnlock(null)}>Cancel</button>
+                <button
+                  className="btn-confirm"
+                  disabled={buyingId !== null || available < cost}
+                  onClick={() => {
+                    const tpl = confirmUnlock;
+                    setConfirmUnlock(null);
+                    buyTemplate(tpl);
+                  }}
+                >
+                  {buyingId !== null ? <Loader2 size={14} className="db-spin" /> : '🔓'}
+                  Confirm Unlock
+                </button>
+              </div>
+              {available < cost && (
+                <p style={{ textAlign:'center', marginTop:'.75rem', fontSize:'.78rem', color:'#ef4444' }}>
+                  You need {cost - available} more credits. <button style={{background:'none',border:'none',color:'#111',cursor:'pointer',fontWeight:700}} onClick={() => { setConfirmUnlock(null); openUpgrade('credit'); }}>Buy Credits</button>
+                </p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Credit Buy Modal — uses shared UpgradeModal */}
+      {upgradeModal && (
+        <UpgradeModal
+          mode={upgradeModal}
+          onClose={(result) => { closeUpgrade(result); if (result?.success) loadCredits(); }}
         />
       )}
 

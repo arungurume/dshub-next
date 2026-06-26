@@ -10,8 +10,9 @@ import {
 } from 'lucide-react';
 import { apiAuth, cmsApi, cmsApiV2 } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
-
 import { useSocketContext } from '@/context/SocketContext';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useUpgradeModal } from '@/hooks/useUpgradeModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ export default function ScreensPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [plan, setPlan] = useState<PlanStatus | null>(null);
+  const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
   const [pagination, setPagination] = useState({ page: 0, size: 10, total: 0 });
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState<Screen | null>(null);
@@ -316,7 +318,7 @@ export default function ScreensPage() {
           <button
             className="btn-primary"
             onClick={() => {
-              if (!canCreate) { toast.error(t('SCREENS.limit_reached')); return; }
+              if (!canCreate) { openUpgrade('screen'); return; }
               router.push('/screens/new');
             }}
             id="pair-screen-btn"
@@ -458,6 +460,12 @@ export default function ScreensPage() {
             </div>
           </div>
         </div>
+      )}
+
+
+      {/* Upgrade Modal — triggered when screen limit reached */}
+      {upgradeModal && (
+        <UpgradeModal mode={upgradeModal} onClose={closeUpgrade} />
       )}
 
       <style>{`

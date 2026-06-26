@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { ContentSelectPopup } from '@/components/shared/ContentSelectPopup';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useUpgradeModal } from '@/hooks/useUpgradeModal';
 
 // ─── Real download URLs from Angular i18n ─────────────────────────────────────
 
@@ -152,6 +154,7 @@ export default function PairScreenPage() {
   // Plan / entitlement
   const [canCreate, setCanCreate] = useState(true);
   const [planMessage, setPlanMessage] = useState('');
+  const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
 
   // Player selection
   const [selectedPlayer, setSelectedPlayer] = useState<typeof PLAYERS[0] | null>(null);
@@ -330,7 +333,7 @@ export default function PairScreenPage() {
             <span>{planMessage}</span>
           </div>
           {!canCreate && (
-            <a href="/billing" className="upgrade-btn">Upgrade</a>
+            <button className="upgrade-btn" onClick={() => openUpgrade('screen')}>Upgrade</button>
           )}
         </div>
       )}
@@ -815,6 +818,7 @@ export default function PairScreenPage() {
           .right-col { align-items: flex-start; }
         }
       `}</style>
+      {upgradeModal && <UpgradeModal mode={upgradeModal} onClose={closeUpgrade} />}
     </div>
   );
 }

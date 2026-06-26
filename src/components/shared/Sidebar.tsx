@@ -102,43 +102,49 @@ export const Sidebar: React.FC = () => {
   return (
     <aside
       style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--border)' }}
-      className={`h-screen fixed md:sticky top-0 left-0 flex flex-col justify-between transition-all duration-300 z-40 ${
+      className={`h-screen fixed md:sticky top-0 left-0 flex flex-col justify-between transition-all duration-300 z-40 relative ${
         isSidebarOpen ? 'w-64 translate-x-0' : 'w-20 -translate-x-full md:translate-x-0'
       }`}
     >
       <div className="flex flex-col overflow-y-auto flex-1 py-6 px-4 gap-8">
 
-        {/* Branding header */}
-        <div className="flex items-center justify-between px-2">
-          {isSidebarOpen ? (
-            <Image
-              src={theme === 'dark' ? '/images/DS_b.png' : '/images/DS_w.png'}
-              alt="DSHub Logo"
-              width={110}
-              height={36}
-              className="object-contain cursor-pointer"
-              onClick={() => handleNav('/dashboard')}
-              priority
-            />
-          ) : (
-            <Image
-              src={theme === 'dark' ? '/images/DS_black_s.png' : '/images/DS_white_s.png'}
-              alt="DS"
-              width={32}
-              height={32}
-              className="object-contain mx-auto cursor-pointer"
-              onClick={() => handleNav('/dashboard')}
-              priority
-            />
-          )}
+        {/* Branding header + toggle arrow */}
+        <div className="flex flex-col gap-3">
+          {/* Logo row */}
+          <div className={`flex items-center px-2 ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}>
+            {isSidebarOpen ? (
+              <Image
+                src={theme === 'dark' ? '/images/DS_b.png' : '/images/DS_w.png'}
+                alt="DSHub Logo"
+                width={110}
+                height={36}
+                className="object-contain cursor-pointer"
+                onClick={() => handleNav('/dashboard')}
+                priority
+              />
+            ) : (
+              <Image
+                src={theme === 'dark' ? '/images/DS_black_s.png' : '/images/DS_white_s.png'}
+                alt="DS"
+                width={32}
+                height={32}
+                className="object-contain cursor-pointer"
+                onClick={() => handleNav('/dashboard')}
+                priority
+              />
+            )}
+          </div>
 
-          <button
-            onClick={toggleSidebar}
-            style={{ border: '1px solid var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
-            className="p-1 rounded-lg transition-all hidden md:block sidebar-toggle-btn"
-          >
-            {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-          </button>
+          {/* Toggle arrow — just below the logo, right-aligned in expanded / centered in collapsed */}
+          <div className={`flex px-2 ${isSidebarOpen ? 'justify-end' : 'justify-center'}`}>
+            <button
+              onClick={toggleSidebar}
+              style={{ border: '1px solid var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
+              className="p-1 rounded-lg transition-all hidden md:flex items-center justify-center sidebar-toggle-btn"
+            >
+              {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            </button>
+          </div>
         </div>
 
         {/* Navigation Core */}

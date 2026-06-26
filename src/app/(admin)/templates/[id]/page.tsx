@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
+import UpgradeModal from '@/components/shared/UpgradeModal';
+import { useUpgradeModal } from '@/hooks/useUpgradeModal';
 
 interface Category {
   id: number;
@@ -54,6 +56,7 @@ export default function DsTemplateDetailPage() {
   const [isPurchased, setIsPurchased] = useState(false);
   const [unlockModalOpen, setUnlockModalOpen] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
+  const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
   const [licenseModalOpen, setLicenseModalOpen] = useState(false);
 
   useEffect(() => {
@@ -193,7 +196,7 @@ export default function DsTemplateDetailPage() {
   };
 
   const handleBuyCredits = () => {
-    router.push('/billing');
+    openUpgrade('credit');
   };
 
   const handleOpenInCanva = () => {
@@ -367,9 +370,22 @@ export default function DsTemplateDetailPage() {
                   <div className="owned-tag">✓ You own this template</div>
                 </div>
               ) : canAfford ? (
-                <button className="btn-unlock-action" onClick={() => setUnlockModalOpen(true)}>
-                  Unlock template for {cost} credits
-                </button>
+                <div className="unlock-direct-wrap">
+                  <button
+                    className="btn-unlock-action"
+                    onClick={handleConfirmUnlock}
+                    disabled={unlocking}
+                  >
+                    {unlocking
+                      ? <><RefreshCw size={15} className="spin" /> Unlocking…</>
+                      : <>🔓 Unlock for <strong>{cost} Credits</strong></>}
+                  </button>
+                  <div className="unlock-cost-summary">
+                    <span>Your balance: <strong>{userCredits}</strong> credits</span>
+                    <span className="cost-arrow">→</span>
+                    <span>After unlock: <strong>{userCredits - cost}</strong> credits</span>
+                  </div>
+                </div>
               ) : (
                 <div className="insufficient-box">
                   <div className="insufficient-warning">
@@ -469,50 +485,6 @@ export default function DsTemplateDetailPage() {
         </div>
       )}
 
-      {/* Unlock Confirmation Modal */}
-      {unlockModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <div className="modal-header">
-              <h2>Unlock Template</h2>
-              <p>Use credits to add this template to your library.</p>
-            </div>
-            <div className="modal-body">
-              <div className="tpl-name-row">
-                <span>{template?.templateName}</span>
-              </div>
-              <div className="balance-breakdown">
-                <div className="break-row">
-                  <span className="lbl">Credit Balance:</span>
-                  <span className="val">{userCredits} Credits</span>
-                </div>
-                <div className="break-row cost">
-                  <span className="lbl">Unlock Cost:</span>
-                  <span className="val">- {cost} Credits</span>
-                </div>
-                <hr className="divider" />
-                <div className="break-row remaining">
-                  <span className="lbl">Remaining:</span>
-                  <span className="val">{userCredits - cost} Credits</span>
-                </div>
-              </div>
-              <p className="agreed-txt">
-                By unlocking, you agree to the <span className="link-lbl" onClick={() => { setLicenseModalOpen(true); setUnlockModalOpen(false); }}>License Terms</span>.
-                <br />
-                <span className="safe-lbl">✓ Personal & Commercial Use Allowed</span>
-              </p>
-            </div>
-            <div className="modal-footer">
-              <button className="modal-btn-cancel" onClick={() => setUnlockModalOpen(false)}>
-                Cancel
-              </button>
-              <button className="modal-btn-confirm" onClick={handleConfirmUnlock} disabled={unlocking}>
-                {unlocking ? 'Unlocking…' : 'Unlock Now'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* License Modal */}
       {licenseModalOpen && (
@@ -848,6 +820,30 @@ export default function DsTemplateDetailPage() {
         .btn-unlock-action.secondary:hover {
           background: var(--btn-secondary-hover);
         }
+        .btn-unlock-action:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+          transform: none;
+        }
+        .unlock-direct-wrap {
+          display: flex;
+          flex-direction: column;
+          gap: 0.55rem;
+        }
+        .unlock-cost-summary {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.6rem;
+          font-size: 0.78rem;
+          color: var(--text-muted);
+          padding: 0.4rem 0.75rem;
+          background: rgba(125, 42, 232, 0.06);
+          border-radius: 8px;
+          border: 1px solid rgba(125, 42, 232, 0.12);
+        }
+        .unlock-cost-summary strong { color: var(--text-primary); }
+        .cost-arrow { color: #7D2AE8; font-weight: 700; }
         .owned-tag {
           margin-top: 0.65rem;
           color: #22c55e;
@@ -1226,6 +1222,7 @@ export default function DsTemplateDetailPage() {
           .license-rules { grid-template-columns: 1fr; }
         }
       `}</style>
+      {upgradeModal && <UpgradeModal mode={upgradeModal} onClose={closeUpgrade} />}
     </div>
   );
 }
