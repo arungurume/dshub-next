@@ -11,6 +11,7 @@ import {
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { ContentSelectPopup } from '@/components/shared/ContentSelectPopup';
 import UpgradeModal from '@/components/shared/UpgradeModal';
+import TrialExpiredUpgradeModal, { type TrialScreenSummary } from '@/components/shared/TrialExpiredUpgradeModal';
 import { useUpgradeModal } from '@/hooks/useUpgradeModal';
 
 // ─── Real download URLs from Angular i18n ─────────────────────────────────────
@@ -154,6 +155,11 @@ export default function PairScreenPage() {
   // Plan / entitlement
   const [canCreate, setCanCreate] = useState(true);
   const [planMessage, setPlanMessage] = useState('');
+  const [usedScreens, setUsedScreens] = useState(0);
+  const [totalScreens, setTotalScreens] = useState(0);
+  const [trialExpiredWithActiveScreens, setTrialExpiredWithActiveScreens] = useState(false);
+  const [trialScreens, setTrialScreens] = useState<TrialScreenSummary[]>([]);
+  const [showTrialModal, setShowTrialModal] = useState(false);
   const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
 
   // Player selection
@@ -183,21 +189,18 @@ export default function PairScreenPage() {
   useEffect(() => {
     cmsApiV2.get('/sac/my/plan').then(({ data }) => {
       const canMake = data.canCreateScreen ?? true;
+      const allowed = data.allowedScreens ?? 0;
+      const used    = data.totalScreens   ?? 0;
       setCanCreate(canMake);
+      setTotalScreens(allowed);
+      setUsedScreens(used);
+      setTrialExpiredWithActiveScreens(data.trialExpiredWithActiveScreens ?? false);
+      setTrialScreens(data.trialScreens ?? []);
 
-      if (data.subscription) {
-        const sub = data.subscription;
-        if (sub.subscriptionType === 'TRIAL_PLAN') {
-          const end = new Date(sub.currentPeriodEnd);
-          const days = Math.ceil((end.getTime() - Date.now()) / 86400000);
-          setPlanMessage(days > 0 ? `Trial ends in ${days} day(s)` : 'Trial ended');
-        } else {
-          setPlanMessage(`Current Plan: ${sub.subscriptionType}`);
-        }
-      }
-
-      if (!canMake) {
-        setPlanMessage('You have reached your screen limit. Please upgrade your plan to add more screens.');
+      if (data.subscription?.subscriptionType === 'TRIAL_PLAN') {
+        const end = new Date(data.subscription.currentPeriodEnd);
+        const days = Math.ceil((end.getTime() - Date.now()) / 86400000);
+        setPlanMessage(days > 0 ? `Trial ends in ${days} day(s)` : 'Trial ended');
       }
     }).catch(() => {});
 
@@ -316,7 +319,7 @@ export default function PairScreenPage() {
           <button
             className="save-btn-top"
             onClick={handleSave}
-            disabled={isDisabled || saving}
+            disabled={isDisabled || saving || !pairCode.trim() || !screenName.trim()}
             id="save-screen-btn"
           >
             {saving ? <RefreshCw size={14} className="spin" /> : null}
@@ -325,16 +328,38 @@ export default function PairScreenPage() {
         </div>
       </div>
 
-      {/* Plan status alert — mirrors Angular planStatusMessage */}
-      {planMessage && (
-        <div className={`plan-alert ${!canCreate ? 'plan-alert-warn' : 'plan-alert-info'}`}>
+      {/* Trial expired — full-width gate */}
+      {trialExpiredWithActiveScreens && (
+        <div className="plan-alert plan-alert-warn">
+          <div className="plan-alert-left">
+            <AlertCircle size={15} />
+            <span>Your free trial has ended. Reactivate your screens to continue pairing devices.</span>
+          </div>
+          <button className="upgrade-btn" onClick={() => setShowTrialModal(true)}>Reactivate Screens</button>
+        </div>
+      )}
+
+      {/* Screen slot limit reached */}
+      {!trialExpiredWithActiveScreens && !canCreate && (
+        <div className="plan-alert plan-alert-warn">
+          <div className="plan-alert-left">
+            <AlertCircle size={15} />
+            <span>
+              You&apos;ve used <strong>{usedScreens}/{totalScreens}</strong> screen slot{totalScreens !== 1 ? 's' : ''}.
+              Buy more slots to add new screens.
+            </span>
+          </div>
+          <button className="upgrade-btn" onClick={() => openUpgrade('screen')}>Buy Screens</button>
+        </div>
+      )}
+
+      {/* Trial countdown (info only) */}
+      {planMessage && canCreate && !trialExpiredWithActiveScreens && (
+        <div className="plan-alert plan-alert-info">
           <div className="plan-alert-left">
             <AlertCircle size={15} />
             <span>{planMessage}</span>
           </div>
-          {!canCreate && (
-            <button className="upgrade-btn" onClick={() => openUpgrade('screen')}>Upgrade</button>
-          )}
         </div>
       )}
 
@@ -819,6 +844,19 @@ export default function PairScreenPage() {
         }
       `}</style>
       {upgradeModal && <UpgradeModal mode={upgradeModal} onClose={closeUpgrade} />}
+      {showTrialModal && trialScreens.length > 0 && (
+        <TrialExpiredUpgradeModal
+          trialScreens={trialScreens}
+          onClose={result => {
+            setShowTrialModal(false);
+            if (result?.success) {
+              setCanCreate(true);
+              setTrialExpiredWithActiveScreens(false);
+              router.push('/screens');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

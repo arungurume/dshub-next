@@ -19,7 +19,9 @@ interface Props {
 }
 
 const FALLBACK_PRICING = { monthly: { perScreen: 5 }, yearly: { perScreen: 4.58 } };
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : Promise.resolve(null);
 
 export default function TrialExpiredUpgradeModal({ trialScreens, onClose }: Props) {
   const [step, setStep] = useState(1);
@@ -63,7 +65,10 @@ export default function TrialExpiredUpgradeModal({ trialScreens, onClose }: Prop
   const mountCard = useCallback(async () => {
     if (cardMountedRef.current) return;
     const stripe = await stripePromise;
-    if (!stripe) return;
+    if (!stripe) {
+      setPaymentError('Payment is not configured. Please contact support.');
+      return;
+    }
     stripeRef.current = stripe;
     const card = stripe.elements().create('card', {
       style: {

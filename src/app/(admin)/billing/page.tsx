@@ -206,15 +206,21 @@ export default function BillingPage() {
 
     // Fetch dynamic credit packs + plan limits from plan config
     cmsApiV2.get('/sac/plan-config/pricing').then(({ data }: any) => {
-      if (data?.creditPacks && Array.isArray(data.creditPacks)) {
-        setCreditPacks(data.creditPacks.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          credits: p.credits,
-          amount: p.priceInCents || 0,
-          currency: p.currency || 'USD',
-          badge: p.badge || undefined,
-        })));
+      if (data?.creditPacks) {
+        let packsArray = data.creditPacks;
+        if (typeof packsArray === 'string') {
+          try { packsArray = JSON.parse(packsArray); } catch (e) { packsArray = []; }
+        }
+        if (Array.isArray(packsArray)) {
+          setCreditPacks(packsArray.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            credits: p.credits,
+            amount: p.priceInCents || 0,
+            currency: p.currency || 'USD',
+            badge: p.badge || undefined,
+          })));
+        }
       }
       if (data?.freePlan) {
         setPlanLimits({
@@ -361,10 +367,10 @@ export default function BillingPage() {
               <div className="overview-card">
                 <div className="ov-icon ov-icon-purple"><Zap size={18} /></div>
                 <div className="ov-body">
-                  <div className="ov-value">{creditBalance ? ((plan?.totalTemplates ?? creditBalance.total) - creditBalance.used) : '—'}</div>
+                  <div className="ov-value">{creditBalance ? (creditBalance.total - creditBalance.used) : '—'}</div>
                   <div className="ov-label">Credits Remaining</div>
                   {creditBalance && (
-                    <div className="ov-sub">{creditBalance.used} used of {plan?.totalTemplates ?? creditBalance.total} total</div>
+                    <div className="ov-sub">{creditBalance.used} used of {creditBalance.total} total</div>
                   )}
                 </div>
               </div>
@@ -496,7 +502,7 @@ export default function BillingPage() {
                     <div className="credit-stats-row">
                       <div className="credit-stat-box">
                         <div className="stat-label">Total Credits</div>
-                        <div className="stat-value">{plan?.totalTemplates ?? creditBalance.total}</div>
+                        <div className="stat-value">{creditBalance.total}</div>
                       </div>
                       <div className="credit-stat-box">
                         <div className="stat-label">Used</div>
@@ -504,7 +510,7 @@ export default function BillingPage() {
                       </div>
                       <div className="credit-stat-box highlight">
                         <div className="stat-label">Remaining</div>
-                        <div className="stat-value">{(plan?.totalTemplates ?? creditBalance.total) - creditBalance.used}</div>
+                        <div className="stat-value">{creditBalance.total - creditBalance.used}</div>
                       </div>
                     </div>
                   )}

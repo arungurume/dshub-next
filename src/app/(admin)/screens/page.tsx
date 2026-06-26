@@ -345,20 +345,27 @@ export default function ScreensPage() {
           >
             <Tag size={14} /> {t('SCREENS.tags')}
           </button>
-          <button
-            className="btn-primary"
-            onClick={() => {
-              if (!canCreate) {
-                if (plan?.trialExpiredWithActiveScreens) { setShowTrialModal(true); return; }
-                openUpgrade('screen');
-                return;
-              }
-              router.push('/screens/new');
-            }}
-            id="pair-screen-btn"
-          >
-            <Plus size={14} /> {t('SCREENS.pair_screen')}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {plan && plan.totalScreens > 0 && plan.totalScreens > plan.usedScreens && (
+              <span className="available-slots-chip">
+                {plan.totalScreens - plan.usedScreens} available
+              </span>
+            )}
+            <button
+              className="btn-primary"
+              onClick={() => {
+                if (!canCreate) {
+                  if (plan?.trialExpiredWithActiveScreens) { setShowTrialModal(true); return; }
+                  openUpgrade('screen');
+                  return;
+                }
+                router.push('/screens/new');
+              }}
+              id="pair-screen-btn"
+            >
+              <Plus size={14} /> {t('SCREENS.pair_screen')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -381,7 +388,15 @@ export default function ScreensPage() {
           <Monitor size={48} opacity={.15} />
           <h3>{t('SCREENS.no_screens_title')}</h3>
           <p>{t('SCREENS.no_screens_sub')}</p>
-          <button className="btn-primary" onClick={() => router.push('/screens/new')} id="empty-pair-screen">
+          <button
+            className="btn-primary"
+            onClick={() => {
+              if (plan?.trialExpiredWithActiveScreens) { setShowTrialModal(true); return; }
+              if (!canCreate) { openUpgrade('screen'); return; }
+              router.push('/screens/new');
+            }}
+            id="empty-pair-screen"
+          >
             <Plus size={14} /> {t('SCREENS.pair_first')}
           </button>
         </div>
@@ -505,14 +520,27 @@ export default function ScreensPage() {
             setShowTrialModal(false);
             if (result?.success) {
               // Refresh plan so banner + canCreate update
-              cmsApiV2.get('/sac/my/plan').then(({ data }) => setPlan({
-                planType: data.planType || '',
-                canCreateScreen: data.canCreateScreen ?? true,
-                totalScreens: data.allowedScreens ?? 0,
-                usedScreens: data.totalScreens ?? 0,
-                trialExpiredWithActiveScreens: data.trialExpiredWithActiveScreens ?? false,
-                trialScreens: data.trialScreens ?? [],
-              })).catch(() => {});
+              cmsApiV2.get('/sac/my/plan').then(({ data }) => {
+                const allowed = data.allowedScreens ?? 0;
+                const used    = data.totalScreens   ?? 0;
+                const available = Math.max(0, allowed - used);
+                setPlan({
+                  planType: data.planType || '',
+                  canCreateScreen: data.canCreateScreen ?? true,
+                  totalScreens: allowed,
+                  usedScreens: used,
+                  trialExpiredWithActiveScreens: data.trialExpiredWithActiveScreens ?? false,
+                  trialScreens: data.trialScreens ?? [],
+                });
+                if (available > 0) {
+                  toast.success(
+                    `Payment complete — ${available} screen slot${available === 1 ? '' : 's'} available. Click "Pair Screen" to add a device.`,
+                    { duration: 6000 }
+                  );
+                } else {
+                  toast.success('Payment complete. Your screens have been activated.');
+                }
+              }).catch(() => {});
             }
           }}
         />
@@ -588,6 +616,7 @@ export default function ScreensPage() {
         .confirm-modal h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .75rem; }
         .confirm-modal p { font-size: .875rem; color: var(--text-muted); margin: 0 0 1.5rem; }
         .confirm-footer { display: flex; justify-content: flex-end; gap: .75rem; }
+        .available-slots-chip { display: inline-flex; align-items: center; background: rgba(16,185,129,.12); color: #059669; border: 1px solid rgba(16,185,129,.3); border-radius: 999px; padding: .25rem .75rem; font-size: .75rem; font-weight: 600; white-space: nowrap; }
         .btn-primary { display: inline-flex; align-items: center; gap: .5rem; background: var(--btn-cta-bg); color: var(--btn-cta-text); border: none; padding: .6rem 1.25rem; border-radius: 12px; font-size: .875rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.2s ease; }
         .btn-primary:hover { background: var(--btn-cta-hover); }
         .btn-primary:disabled { opacity: .55; cursor: not-allowed; }

@@ -86,12 +86,7 @@ interface CreditPack {
 
 type CategoryTab = 'Trending' | 'Restaurant' | 'Cafe' | 'Fast Food' | 'Pizza' | 'Seasonal' | 'Recently Purchased';
 
-// ─── Stripe helpers ────────────────────────────────────────────────────────────
-const CREDIT_PACKS: CreditPack[] = [
-  { id: 'credits_10',  name: 'Starter Pack', credits: 10,  amount: 999,  currency: 'USD' },
-  { id: 'credits_50',  name: 'Value Pack',   credits: 50,  amount: 3999, currency: 'USD', badge: 'Popular' },
-  { id: 'credits_150', name: 'Pro Pack',     credits: 150, amount: 9999, currency: 'USD', badge: 'Best Value' },
-];
+// Credit packs are now fetched from /sac/plan-config/pricing
 
 function getStripePromise(locale: string) {
   return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '', { locale: locale as any });
@@ -167,16 +162,15 @@ function DashCardPaymentForm({ clientSecret, amount, onSuccess, onCancel }: {
 }
 
 // ─── Credit Buy Modal (pack selector + payment form) ─────────────────────────
-function CreditBuyModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+export function DashBuyCreditsModal({ onClose, onSuccess, stripePromise, creditPacks }: any) {
   const [selectedPack, setSelectedPack] = useState<CreditPack | null>(null);
   const [paymentInfo, setPaymentInfo] = useState<{ clientSecret: string; amount: number } | null>(null);
   const [stripeInst, setStripeInst] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const locale = typeof window !== 'undefined' ? (localStorage.getItem('lang') || 'en') : 'en';
-    setStripeInst(getStripePromise(locale));
-  }, []);
+    setStripeInst(stripePromise);
+  }, [stripePromise]);
 
   async function handleBuy(pack: CreditPack) {
     setSelectedPack(pack);
@@ -235,7 +229,7 @@ function CreditBuyModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
             <>
               <p className="dbc-pack-prompt">Select a credit pack to get started:</p>
               <div className="dbc-packs-grid">
-                {CREDIT_PACKS.map(pack => (
+                {creditPacks.map((pack: CreditPack) => (
                   <button
                     key={pack.id}
                     className={`dbc-pack-card ${selectedPack?.id === pack.id && loading ? 'dbc-pack-loading' : ''}`}
@@ -292,13 +286,15 @@ export default function DashboardMainPage() {
   const [purchasedTemplates, setPurchasedTemplates] = useState<Map<number, DsTemplate>>(new Map());
   const [purchasesLoading, setPurchasesLoading] = useState(true);
 
-  // Credit balance & Buying State
+  // Credit packs & Buying State
+  const [creditPacks, setCreditPacks] = useState<CreditPack[]>([]);
   const [credits, setCredits] = useState<{ total: number; used: number } | null>(null);
   const [buyingId, setBuyingId] = useState<number | null>(null);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
   const [purchasedIds, setPurchasedIds] = useState<Set<number>>(new Set());
   const [confirmUnlock, setConfirmUnlock] = useState<DsTemplate | null>(null);
+  const [stripePromise, setStripePromise] = useState<any>(null);
 
   // Subscription info
   const [subPlan, setSubPlan] = useState<any>(null);
@@ -315,6 +311,9 @@ export default function DashboardMainPage() {
 
   // Load everything on mount
   useEffect(() => {
+    const locale = typeof window !== 'undefined' ? (localStorage.getItem('lang') || 'en') : 'en';
+    setStripePromise(getStripePromise(locale));
+    loadCreditPacks();
     loadStats();
     loadGallery();
     loadPurchases();
@@ -322,6 +321,21 @@ export default function DashboardMainPage() {
     checkCanvaStatus();
     loadSubscription();
   }, []);
+
+  async function loadCreditPacks() {
+    try {
+      const res = await cmsApiV2.get('/sac/plan-config/pricing');
+      if (res.data?.creditPacks) {
+        const parsedPacks = JSON.parse(res.data.creditPacks).map((p: any) => ({
+          ...p,
+          amount: p.priceInCents // map backend property to frontend interface
+        }));
+        setCreditPacks(parsedPacks);
+      }
+    } catch (err) {
+      console.error('Failed to load credit packs:', err);
+    }
+  }
 
   const loadStats = async () => {
     setStatsLoading(true);
@@ -397,7 +411,8 @@ export default function DashboardMainPage() {
       if (res.data) {
         setCredits({ total: res.data.totalCredits ?? 0, used: res.data.usedCredits ?? 0 });
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       setCredits(null);
     }
   };
@@ -552,6 +567,14 @@ export default function DashboardMainPage() {
 
   return (
     <div className="db-page">
+      {showCreditModal && (
+        <DashBuyCreditsModal
+          onClose={() => setShowCreditModal(false)}
+          onSuccess={loadStats}
+          stripePromise={stripePromise}
+          creditPacks={creditPacks}
+        />
+      )}
 
       {/* ─── MAIN DESKTOP GRID ─── */}
       <div className="db-main-container">
@@ -577,7 +600,7 @@ export default function DashboardMainPage() {
                     <Sparkles size={14} />
                     <span>Browse Templates</span>
                   </button>
-                  <button onClick={() => openUpgrade('credit')} className="db-cta-buy-credits">
+                  <button onClick={() => setShowCreditModal(true)} className="db-cta-buy-credits">
                     <Coins size={14} />
                     <span>Buy Credits</span>
                   </button>

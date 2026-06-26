@@ -25,7 +25,9 @@ const FALLBACK_PRICING = {
   ],
 };
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : Promise.resolve(null);
 
 export default function UpgradeModal({ mode, onClose, initialScreens = 1 }: UpgradeModalProps) {
   const [step, setStep] = useState(1);
@@ -48,6 +50,15 @@ export default function UpgradeModal({ mode, onClose, initialScreens = 1 }: Upgr
   useEffect(() => {
     cmsApiV2.get('/sac/plan-config/pricing').then(({ data }: any) => {
       if (data) {
+        let parsedPacks = [];
+        if (data.creditPacks) {
+          try {
+            parsedPacks = typeof data.creditPacks === 'string' ? JSON.parse(data.creditPacks) : data.creditPacks;
+          } catch (e) {
+            console.error('Failed to parse credit packs', e);
+          }
+        }
+        
         const dynamicPricing = {
           monthly:  { perScreen: (data.screen?.monthly || 500) / 100 },
           yearly:   { perScreen: (data.screen?.yearly || 5500) / 100 },
@@ -56,7 +67,7 @@ export default function UpgradeModal({ mode, onClose, initialScreens = 1 }: Upgr
             monthly: (data.location?.monthly || 1000) / 100,
             yearly:  (data.location?.yearly || 11000) / 100,
           },
-          credit: (data.creditPacks || []).map((p: any) => ({
+          credit: (Array.isArray(parsedPacks) ? parsedPacks : []).map((p: any) => ({
             id: p.id,
             name: p.name,
             credits: p.credits,
@@ -107,7 +118,10 @@ export default function UpgradeModal({ mode, onClose, initialScreens = 1 }: Upgr
   const mountCard = useCallback(async () => {
     if (cardMountedRef.current) return;
     const stripe = await stripePromise;
-    if (!stripe) return;
+    if (!stripe) {
+      setPaymentError('Payment is not configured. Please contact support.');
+      return;
+    }
     stripeRef.current = stripe;
     const elements = stripe.elements();
     const card = elements.create('card', {

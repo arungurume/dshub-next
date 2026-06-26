@@ -7,7 +7,7 @@ import {
   MapPin, Plus, Star, Pencil, Trash2, RefreshCw,
   Building2, Phone, Mail, Lock, X
 } from 'lucide-react';
-import { omsApi, umsApi } from '@/lib/api';
+import { omsApi, umsApi, cmsApiV2 } from '@/lib/api';
 import { useDSStore } from '@/store/useDSStore';
 import { useLanguage } from '@/context/LanguageContext';
 import UpgradeModal from '@/components/shared/UpgradeModal';
@@ -70,10 +70,15 @@ export default function LocationsPage() {
     title: string; message: string; label: string; danger?: boolean; action: () => void;
   } | null>(null);
   const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
+  const [allowedLocations, setAllowedLocations] = useState(3);
 
   useEffect(() => {
     setUserRole(localStorage.getItem('role') || '');
     fetchLocations();
+    // Fetch the actual location limit from plan config (free plan + paid entitlements)
+    cmsApiV2.get('/sac/plan-config/pricing')
+      .then(({ data }) => setAllowedLocations(data?.freePlan?.locations ?? 3))
+      .catch(() => {});
   }, []);
 
   const fetchLocations = useCallback(async () => {
@@ -90,8 +95,7 @@ export default function LocationsPage() {
   }, [orgId, t]);
 
   function handleAddNew() {
-    // Angular: show upgrade dialog if already has >= 1 location (free tier = 1 location)
-    if (locations.length >= 1) {
+    if (locations.length >= allowedLocations) {
       openUpgrade('location');
       return;
     }
