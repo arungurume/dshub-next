@@ -76,6 +76,7 @@ function RedeemContent() {
             alt="DSHub"
             width={140}
             height={60}
+            style={{ height: 'auto' }}
             className="object-contain"
             priority
           />
@@ -196,10 +197,15 @@ function RedeemContent() {
                 <span style={{ padding: '.12rem .5rem', borderRadius: '999px', fontWeight: 800, fontSize: '.65rem', background: t.bg, color: t.color }}>
                   Tier {t.tier}
                 </span>
-                <span>{t.screens} lifetime screens</span>
+                <span>{t.screens} lifetime screen{t.screens !== 1 ? 's' : ''}</span>
               </div>
             ))}
           </div>
+
+          {/* Stacking note */}
+          <p style={{ textAlign: 'center', fontSize: '.74rem', color: 'var(--text-muted)', marginTop: '.85rem', lineHeight: 1.5 }}>
+            🔗 <strong style={{ color: 'var(--text)' }}>Stacking supported</strong> — redeem multiple codes to accumulate more screen slots. Each code adds independently.
+          </p>
         </div>
 
         {/* Footer link */}

@@ -54,7 +54,7 @@ function SignInContent() {
       if (!g?.accounts?.id) return;
 
       g.accounts.id.initialize({
-        client_id: '332106161692-m75rkqurh616o3u0lath06lc2025ghb5.apps.googleusercontent.com',
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '332106161692-m75rkqurh616o3u0lath06lc2025ghb5.apps.googleusercontent.com',
         callback: handleGoogleCredentialResponse,
         auto_select: false,
       });
@@ -249,6 +249,7 @@ function SignInContent() {
               alt="DSHub"
               width={160}
               height={69}
+              style={{ height: 'auto' }}
               className="object-contain"
               priority
             />

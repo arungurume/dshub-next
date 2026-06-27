@@ -98,3 +98,9 @@ export const STRIPE_UPDATE_SCREENS      = '/spgc/subscription/update-additional-
 export const STRIPE_UPDATE_STORAGE      = '/spgc/subscription/update-additional-storage'; // cmsApi POST
 export const STRIPE_CANCEL_SUB          = (id: string) => `/sac/subscriptions/${id}/cancel`; // cmsApi POST
 export const STRIPE_CANCEL_SUB_END      = (id: string) => `/spgc/subscription/${id}/cancel-end`; // cmsApiV2 POST
+
+// ─── Instagram OAuth (/instagram) — cmsApi ───────────────────────────────────
+export const INSTAGRAM_CONNECT    = '/instagram/connect';    // GET  → { authorizeUrl }
+export const INSTAGRAM_STATUS     = '/instagram/status';     // GET  → { connected }
+export const INSTAGRAM_MEDIA      = '/instagram/media';      // GET  → { data: [], username }
+export const INSTAGRAM_DISCONNECT = '/instagram/disconnect'; // DELETE

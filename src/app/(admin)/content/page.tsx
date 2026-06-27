@@ -1346,7 +1346,7 @@ export default function ContentManagerPage() {
 
         /* Grid */
         .content-grid {
-          display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+          display: grid; grid-template-columns: repeat(5, 1fr);
           gap: 1rem;
         }
         .folder-card .thumb-placeholder {
@@ -1554,7 +1554,7 @@ export default function ContentManagerPage() {
           .content-toolbar { gap: .5rem; }
           .toolbar-center { order: 3; width: 100%; }
           .type-tabs { overflow-x: auto; }
-          .content-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+          .content-grid { grid-template-columns: repeat(3, 1fr); }
         }
       `}</style>
     </div>

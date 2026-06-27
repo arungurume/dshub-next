@@ -31,6 +31,9 @@ const getAuthToken = (): string | null => {
   return getCookie('token') || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
 };
 
+// Prevents multiple simultaneous 401 handlers from all redirecting at once
+let _redirectingToSignin = false;
+
 // Configure interceptor for attaching auth headers and handling 401s
 const configureAuthInterceptors = (client: AxiosInstance) => {
   client.interceptors.request.use(
@@ -49,11 +52,9 @@ const configureAuthInterceptors = (client: AxiosInstance) => {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
-      // 401 Unauthorized handler
-      if (error.response?.status === 401) {
-        // Exclude Open-Meteo or any specific URLs if needed
+      if (error.response?.status === 401 && !_redirectingToSignin) {
         if (!error.config.url?.includes('open-meteo.com')) {
-          // Clear authentication tokens and redirect
+          _redirectingToSignin = true;
           removeCookie('token');
           if (typeof window !== 'undefined') {
             localStorage.removeItem('token');

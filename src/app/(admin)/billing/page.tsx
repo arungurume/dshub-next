@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { RefreshCw, ReceiptText, Zap, MapPin, Monitor, Check, X, BarChart2, ShoppingBag, Download } from 'lucide-react';
+import { RefreshCw, ReceiptText, Zap, MapPin, Monitor, Check, X, BarChart2, ShoppingBag, Download, Gem } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import UpgradeModal, { UpgradeMode } from '@/components/shared/UpgradeModal';
 import TrialExpiredUpgradeModal, { type TrialScreenSummary } from '@/components/shared/TrialExpiredUpgradeModal';
@@ -360,6 +360,54 @@ export default function BillingPage() {
             </div>
           )}
 
+          {/* ── AppSumo Lifetime Deal ───────────────────────────────────── */}
+          {usageScreens.filter((s: any) => s.billingCycle === 'appsumo_ltd').length > 0 && (() => {
+            const ltds = usageScreens.filter((s: any) => s.billingCycle === 'appsumo_ltd');
+            const totalLtdScreens = ltds.reduce((sum: number, s: any) => sum + (s.quantity || 0), 0);
+            return (
+              <section className="ltd-section">
+                <div className="ltd-header">
+                  <div className="ltd-header-left">
+                    <Gem size={16} className="ltd-gem" />
+                    <span className="ltd-title">AppSumo Lifetime Deal</span>
+                    <span className="ltd-pill">Lifetime · Never expires</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div className="ltd-total">
+                      <Monitor size={13} /> {totalLtdScreens} lifetime screen{totalLtdScreens !== 1 ? 's' : ''} total
+                    </div>
+                    <a href="/redeem" className="ltd-stack-link">+ Stack another code</a>
+                  </div>
+                </div>
+                <div className="ltd-cards">
+                  {ltds.map((ent: any, i: number) => {
+                    const qty = ent.quantity || 0;
+                    const tier = qty <= 1 ? 1 : qty <= 3 ? 2 : 3;
+                    const redeemedDate = ent.createdAt
+                      ? new Date(ent.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      : null;
+                    return (
+                      <div key={ent.id || i} className="ltd-card">
+                        <div className="ltd-card-icon"><Gem size={18} /></div>
+                        <div className="ltd-card-body">
+                          <div className="ltd-card-top">
+                            <span className={`ltd-tier-badge ltd-tier-${tier}`}>Tier {tier}</span>
+                            <span className="ltd-card-screens">{qty} lifetime screen{qty !== 1 ? 's' : ''}</span>
+                          </div>
+                          <div className="ltd-card-meta">
+                            {redeemedDate && <span>Redeemed {redeemedDate}</span>}
+                            <span className="ltd-never">✓ Never expires</span>
+                          </div>
+                        </div>
+                        <span className="ltd-status-badge">Active</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })()}
+
           {/* ── Usage Overview ──────────────────────────────────────────── */}
           <section className="billing-section">
             <h2 className="section-title" style={{ marginBottom: '.9rem' }}>Usage Overview</h2>
@@ -661,6 +709,30 @@ export default function BillingPage() {
         .active-plan-badge { background: #7D2AE8; color: #fff; font-size: .65rem; font-weight: 700; padding: .18rem .55rem; border-radius: 999px; text-transform: uppercase; letter-spacing: .04em; }
         .active-plan-name { font-size: .9rem; font-weight: 700; }
         .active-plan-renews { font-size: .78rem; color: var(--text-muted); margin-left: auto; }
+
+        /* ── AppSumo LTD Section ─────────────────────────────────────────── */
+        .ltd-section { background: linear-gradient(135deg, rgba(245,158,11,.06), rgba(217,119,6,.04)); border: 1px solid rgba(245,158,11,.25); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+        .ltd-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-bottom: .9rem; }
+        .ltd-header-left { display: flex; align-items: center; gap: .5rem; }
+        .ltd-gem { color: #d97706; flex-shrink: 0; }
+        .ltd-title { font-size: .95rem; font-weight: 800; color: var(--text); }
+        .ltd-pill { font-size: .65rem; font-weight: 700; padding: .15rem .55rem; border-radius: 999px; background: rgba(245,158,11,.15); color: #b45309; border: 1px solid rgba(245,158,11,.3); text-transform: uppercase; letter-spacing: .04em; }
+        .ltd-total { display: flex; align-items: center; gap: .35rem; font-size: .78rem; font-weight: 600; color: var(--text-muted); }
+        .ltd-cards { display: flex; flex-direction: column; gap: .55rem; }
+        .ltd-card { display: flex; align-items: center; gap: .85rem; background: var(--card-bg); border: 1px solid rgba(245,158,11,.2); border-radius: 11px; padding: .8rem 1rem; }
+        .ltd-card-icon { width: 36px; height: 36px; border-radius: 9px; background: rgba(245,158,11,.1); color: #d97706; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ltd-card-body { flex: 1; min-width: 0; }
+        .ltd-card-top { display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; }
+        .ltd-card-screens { font-size: .88rem; font-weight: 700; }
+        .ltd-card-meta { display: flex; align-items: center; gap: .75rem; font-size: .75rem; color: var(--text-muted); flex-wrap: wrap; }
+        .ltd-never { color: #16a34a; font-weight: 600; }
+        .ltd-tier-badge { font-size: .63rem; font-weight: 800; padding: .13rem .48rem; border-radius: 999px; letter-spacing: .03em; }
+        .ltd-tier-1 { background: rgba(59,130,246,.1); color: #2563eb; }
+        .ltd-tier-2 { background: rgba(125,42,232,.1); color: #7D2AE8; }
+        .ltd-tier-3 { background: rgba(245,158,11,.12); color: #d97706; }
+        .ltd-status-badge { font-size: .65rem; font-weight: 700; padding: .18rem .55rem; border-radius: 999px; background: rgba(22,163,74,.1); color: #16a34a; border: 1px solid rgba(22,163,74,.2); white-space: nowrap; flex-shrink: 0; }
+        .ltd-stack-link { font-size: .75rem; font-weight: 700; color: #b45309; text-decoration: none; padding: .2rem .65rem; border-radius: 999px; border: 1px solid rgba(245,158,11,.35); background: rgba(245,158,11,.08); white-space: nowrap; }
+        .ltd-stack-link:hover { background: rgba(245,158,11,.15); }
 
         /* ── Usage Overview ──────────────────────────────────────────────── */
         .overview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; }
