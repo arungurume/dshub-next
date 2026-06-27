@@ -213,6 +213,52 @@ function PreviewModal({ items, initialIndex = 0, name, transition, onClose }: { 
       );
     }
 
+    if (cur.contentType === 'APP_INSTAGRAM') {
+      const meta = cur.metadata || {};
+      const accountName = meta.accountName || cur.permaLink || 'Instagram';
+      const bgColor = meta.backgroundColor || '#920a75';
+      const color = meta.fontColor || '#ffffff';
+      const font = meta.font || 'Poppins';
+      const template = meta.template || 'Image with text on left';
+      const showCaption = meta.showCaption !== false;
+
+      return (
+        <div style={{ width: '100%', height: '100%', backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ 
+            width: '100%', maxWidth: '400px', backgroundColor: bgColor, color: color, fontFamily: font, 
+            borderRadius: '12px', overflow: 'hidden', display: 'flex',
+            flexDirection: template === 'Image with text on left' ? 'row-reverse' : template === 'Image with text on right' ? 'row' : 'column'
+          }}>
+            {template !== 'Image only' && (
+              <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{accountName}</span>
+                </div>
+                {showCaption && (
+                  <p style={{ fontSize: '1rem', lineHeight: 1.5, opacity: 0.9 }}>
+                    (Mocked Instagram Post Content from {accountName})
+                  </p>
+                )}
+              </div>
+            )}
+            <div style={{ 
+              flex: template === 'Image only' ? '1 1 100%' : '1 1 50%',
+              aspectRatio: template === 'Image only' || template === 'Image with text overlay' ? '1 / 1' : '4 / 5',
+              background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+            }}>
+              <span style={{ opacity: 0.5, fontSize: '0.8rem' }}>Image Area</span>
+              {template === 'Image with text overlay' && (
+                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', padding: '20px', color: '#fff' }}>
+                    <p style={{ fontSize: '0.9rem' }}>{showCaption ? `Overlay caption for ${accountName}` : ''}</p>
+                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (isYT && ytId) {
       return (
         <iframe
@@ -1028,8 +1074,10 @@ export default function PlaylistEditorPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={getSafeThumbnailUrl(item)!} alt={item.name} />
                     ) : item.contentType?.startsWith('APP_') ? (
-                      <div style={{ width: '100%', height: '100%', backgroundColor: '#2a2a2a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 600 }}>
-                        {item.name ? item.name.charAt(0).toUpperCase() : 'A'}
+                      <div style={{ width: '100%', height: '100%', backgroundColor: '#1a1a2e', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {APP_ITEMS.find(a => a.contentType === item.contentType)?.icon || (
+                          <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>{item.name ? item.name.charAt(0).toUpperCase() : 'A'}</div>
+                        )}
                       </div>
                     ) : (
                       <ImageIcon size={18} style={{ opacity: 0.3 }} />

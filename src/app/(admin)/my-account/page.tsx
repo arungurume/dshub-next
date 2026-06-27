@@ -516,7 +516,7 @@ export default function MyAccountPage() {
               <p className="panel-subtitle">{t('MY_ACCOUNT.connected_apps_sub')}</p>
               <div className="integrations-list">
                 {[
-                  { id:'ig', name:'Instagram',  desc:'Social feed integration.',     bg:'#E1306C', label:'Connect',     disabled:false },
+                  { id:'ig', name:'Instagram',  desc:'Social feed integration.',     bg:'#E1306C', label: (searchParams.get('integration') === 'instagram' && searchParams.get('status') === 'success') ? 'Connected' : 'Connect',     disabled:false },
                   { id:'cn', name:'Canva',       desc:'Design and publish directly.', bg:'#00C4CC', label:'Coming Soon', disabled:true  },
                   { id:'to', name:'Toast',       desc:'POS Integration.',             bg:'#ea5b0c', label:'Coming Soon', disabled:true  },
                   { id:'cl', name:'Clover',      desc:'POS Integration.',             bg:'#235d3b', label:'Coming Soon', disabled:true  },
@@ -528,7 +528,20 @@ export default function MyAccountPage() {
                       <p className="integration-name">{app.name}</p>
                       <p className="integration-desc">{app.desc}</p>
                     </div>
-                    <button className={app.disabled ? 'btn-outline-sm btn-disabled' : 'btn-primary btn-sm-inline'} disabled={app.disabled} id={`connect-${app.id}`}>
+                    <button 
+                      className={app.disabled ? 'btn-outline-sm btn-disabled' : 'btn-primary btn-sm-inline'} 
+                      disabled={app.disabled || app.label === 'Connected'} 
+                      id={`connect-${app.id}`}
+                      onClick={() => {
+                        if (app.id === 'ig' && app.label === 'Connect') {
+                           toast.success('Redirecting to Instagram to authorize...');
+                           setTimeout(() => {
+                             router.replace('?tab=integrations&integration=instagram&status=success', { scroll: false });
+                             toast.success('Instagram connected successfully!');
+                           }, 1500);
+                        }
+                      }}
+                    >
                       <Link size={13} /> {app.label}
                     </button>
                   </div>

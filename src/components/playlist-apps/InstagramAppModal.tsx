@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Check, XCircle } from 'lucide-react';
+import { X, Check, XCircle, Play } from 'lucide-react';
 import { PlaylistItem } from '@/types/playlist';
+import { PreviewTVBezel } from './PreviewTVBezel';
 
 export function InstagramAppModal({ editIndex, initialData, onAdd, onEdit, onClose }: { 
   editIndex?: number;
@@ -44,6 +45,7 @@ export function InstagramAppModal({ editIndex, initialData, onAdd, onEdit, onClo
     const item: PlaylistItem = {
       id: `app_${Date.now()}`,
       name: `Instagram: ${accountName}`,
+      permaLink: accountName,
       thumbLink: '',
       duration: postDuration,
       contentType: 'APP_INSTAGRAM',
@@ -186,7 +188,8 @@ export function InstagramAppModal({ editIndex, initialData, onAdd, onEdit, onClo
               </div>
 
               {/* Right Preview */}
-              <div style={{ flex: 1, backgroundColor: '#000', borderRadius: '8px', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <PreviewTVBezel>
+                <div style={{ flex: 1, backgroundColor: '#000', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ 
                   width: '100%', 
                   maxWidth: '360px', 
@@ -230,7 +233,8 @@ export function InstagramAppModal({ editIndex, initialData, onAdd, onEdit, onClo
                     )}
                   </div>
                 </div>
-              </div>
+                </div>
+              </PreviewTVBezel>
             </div>
           )}
         </div>

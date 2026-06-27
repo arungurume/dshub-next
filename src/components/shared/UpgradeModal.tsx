@@ -36,6 +36,7 @@ export default function UpgradeModal({ mode, onClose, initialScreens = 1 }: Upgr
   const [usedScreens, setUsedScreens] = useState(initialScreens);
   const [PRICING, setPRICING] = useState(FALLBACK_PRICING);
   const [selectedPack, setSelectedPack] = useState(FALLBACK_PRICING.credit[1]);
+  const [ltdVisible, setLtdVisible] = useState(true);
   const [cardholderName, setCardholderName] = useState('');
   const [couponCode, setCouponCode] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -59,6 +60,9 @@ export default function UpgradeModal({ mode, onClose, initialScreens = 1 }: Upgr
           }
         }
         
+        if (data.ltdPlanVisible === false || data.ltdPlanVisible === 'false') {
+          setLtdVisible(false);
+        }
         const dynamicPricing = {
           monthly:  { perScreen: (data.screen?.monthly || 500) / 100 },
           yearly:   { perScreen: (data.screen?.yearly || 5500) / 100 },
@@ -211,7 +215,7 @@ export default function UpgradeModal({ mode, onClose, initialScreens = 1 }: Upgr
               <div className="ud-cycle">
                 <button className={billingCycle==='monthly'?'active':''} onClick={()=>setBillingCycle('monthly')}>Monthly</button>
                 <button className={billingCycle==='yearly'?'active':''} onClick={()=>setBillingCycle('yearly')}>Yearly (Save 15%)</button>
-                <button className={billingCycle==='lifetime'?'active':''} onClick={()=>setBillingCycle('lifetime')}>Lifetime 💎</button>
+                {ltdVisible && <button className={billingCycle==='lifetime'?'active':''} onClick={()=>setBillingCycle('lifetime')}>Lifetime 💎</button>}
               </div>
             </div>
             <div className="ud-psummary">

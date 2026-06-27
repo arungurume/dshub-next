@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,9 +20,11 @@ const loginSchema = z.object({
 
 type LoginFields = z.infer<typeof loginSchema>;
 
-export default function SignInPage() {
+function SignInContent() {
   const { t, language, setLanguage } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectAfterLogin = searchParams.get('redirect') || '/dashboard';
   const setCurrentUser = useDSStore((state) => state.setCurrentUser);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -113,7 +115,7 @@ export default function SignInPage() {
       setCurrentUser(user);
 
       toast.success('Successfully logged in with Google');
-      router.replace('/dashboard');
+      router.replace(redirectAfterLogin);
     } catch (err: any) {
       console.error('Google Auth login error:', err);
       setLoginError(err.response?.data?.message || 'Google authentication failed');
@@ -142,7 +144,7 @@ export default function SignInPage() {
       setCurrentUser(user);
 
       toast.success('Logged in successfully');
-      router.replace('/dashboard');
+      router.replace(redirectAfterLogin);
     } catch (err: any) {
       console.error('Local login error:', err);
       setLoginError(err.response?.data?.message || 'Invalid username or password');
@@ -485,6 +487,14 @@ export default function SignInPage() {
       {/* Right Panel: Auto-rotating Image Slideshow */}
       <AuthHeroSlider />
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInContent />
+    </Suspense>
   );
 }
 
