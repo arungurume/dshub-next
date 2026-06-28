@@ -7,6 +7,7 @@ export interface PlaylistItem {
   assetSourceType?: string;
   permaLink?: string;
   metadata?: any;
+  isDirty?: boolean;         // true when an existing app item has been edited
 }
 
 export interface TransitionSettings {

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import { PreviewTVBezel } from './PreviewTVBezel';
 import { PlaylistItem } from '@/types/playlist';
 
@@ -26,6 +26,24 @@ function extractYouTubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+// Parse ISO 8601 duration (e.g. PT4M33S) to seconds
+function parseISO8601Duration(iso: string): number {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const h = parseInt(match[1] || '0', 10);
+  const m = parseInt(match[2] || '0', 10);
+  const s = parseInt(match[3] || '0', 10);
+  return h * 3600 + m * 60 + s;
+}
+
+function secsToDisplay(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export function YoutubeAppModal({ editIndex, initialData, onAdd, onEdit, onClose }: {
   editIndex?: number;
   initialData?: any;
@@ -33,19 +51,38 @@ export function YoutubeAppModal({ editIndex, initialData, onAdd, onEdit, onClose
   onEdit: (idx: number, item: PlaylistItem) => void;
   onClose: () => void;
 }) {
-  const [url, setUrl] = useState(initialData?.url || '');
+  const [url, setUrl] = useState(initialData?.url || initialData?.permaLink || '');
   const [name, setName] = useState(initialData?.name || '');
   const [isMuted, setIsMuted] = useState(initialData?.metadata?.isMuted ?? true);
+  const [duration, setDuration] = useState<number>(initialData?.duration || 15);
+  const [fetchingDuration, setFetchingDuration] = useState(false);
 
   const videoId = extractYouTubeId(url);
+  const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+  useEffect(() => {
+    if (!videoId || !apiKey) return;
+    setFetchingDuration(true);
+    fetch(`https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails,snippet&key=${apiKey}`)
+      .then(r => r.json())
+      .then(data => {
+        const item = data?.items?.[0];
+        if (!item) return;
+        const secs = parseISO8601Duration(item.contentDetails?.duration || '');
+        if (secs > 0) setDuration(secs);
+        if (!name.trim() && item.snippet?.title) setName(item.snippet.title);
+      })
+      .catch(() => {})
+      .finally(() => setFetchingDuration(false));
+  }, [videoId, apiKey]);
 
   function save() {
     if (!url.trim()) return;
     const item: PlaylistItem = {
       id: `app_${Date.now()}`,
       name: name.trim() || 'YouTube Video',
-      thumbLink: '',
-      duration: 15,
+      thumbLink: videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : '',
+      duration,
       contentType: 'APP_YOUTUBE',
       permaLink: url.trim(),
       metadata: { isMuted }
@@ -76,7 +113,27 @@ export function YoutubeAppModal({ editIndex, initialData, onAdd, onEdit, onClose
               <p className="pl-label">YouTube URL</p>
               <input className="pl-input" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." />
             </div>
-            
+
+            {/* Duration — auto-fetched, shown with edit control */}
+            <div>
+              <p className="pl-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                Duration (seconds)
+                {fetchingDuration && <Loader2 size={12} className="animate-spin" style={{ opacity: 0.6 }} />}
+                {!fetchingDuration && videoId && (
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(99,255,99,0.7)', fontWeight: 400 }}>
+                    · {secsToDisplay(duration)} auto-detected
+                  </span>
+                )}
+              </p>
+              <input
+                type="number"
+                className="pl-input"
+                min={1}
+                value={duration}
+                onChange={e => setDuration(Math.max(1, parseInt(e.target.value) || 1))}
+              />
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
               <input type="checkbox" id="ytMuted" checked={isMuted} onChange={e => setIsMuted(e.target.checked)} />
               <label htmlFor="ytMuted" style={{ fontSize: '0.85rem', color: '#fff', cursor: 'pointer' }}>Start video muted (recommended)</label>

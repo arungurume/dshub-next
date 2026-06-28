@@ -1018,16 +1018,18 @@ export default function PlaylistsPage() {
         .preview-item-name { display: block; font-size: .75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .preview-item-dur { display: flex; align-items: center; gap: .2rem; font-size: .65rem; color: var(--text-muted); margin-top: .15rem; }
 
-        /* Transition animations (mirrored from editor) */
+        /* Transition animations */
         .pl-anim-fade { animation: plFadeIn var(--dur, 400ms) ease; }
         .pl-anim-slide { animation: plSlideIn var(--dur, 400ms) ease; }
         .pl-anim-zoom { animation: plZoomIn var(--dur, 400ms) ease; }
         .pl-anim-flip { animation: plFlipIn var(--dur, 400ms) ease; }
+        .pl-anim-rotate { animation: plRotateIn var(--dur, 400ms) ease; }
         .pl-anim-none { }
         @keyframes plFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes plSlideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
         @keyframes plZoomIn { from { transform: scale(.88); opacity: 0; } to { transform: none; opacity: 1; } }
         @keyframes plFlipIn { from { transform: rotateY(60deg); opacity: 0; } to { transform: none; opacity: 1; } }
+        @keyframes plRotateIn { from { opacity: 0; transform: rotate(-6deg) scale(0.95); } to { opacity: 1; transform: rotate(0) scale(1); } }
 
         /* Buttons */
         .btn-primary { display: inline-flex; align-items: center; gap: .5rem; background: var(--btn-cta-bg); color: var(--btn-cta-text); border: none; padding: .6rem 1.25rem; border-radius: 12px; font-size: .875rem; font-weight: 600; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.2s ease; }

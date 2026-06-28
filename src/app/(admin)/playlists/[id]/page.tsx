@@ -136,8 +136,10 @@ function PreviewModal({ items, initialIndex = 0, name, transition, onClose }: { 
   const [animKey, setAnimKey] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Prevents both the setTimeout and video onEnded from advancing the same slide twice
+  const didAdvanceRef = useRef(false);
   const cur = items[idx];
 
   const speedMs = transition.speed === 'FAST' ? 200 : transition.speed === 'SLOW' ? 800 : 400;
@@ -148,17 +150,27 @@ function PreviewModal({ items, initialIndex = 0, name, transition, onClose }: { 
     setProgress(0);
   };
 
+  // First caller wins — guards against timer + onEnded both firing
+  function doAdvance() {
+    if (didAdvanceRef.current) return;
+    didAdvanceRef.current = true;
+    timerRef.current && clearTimeout(timerRef.current);
+    progressRef.current && clearInterval(progressRef.current);
+    advanceTo((idx + 1) % items.length);
+  }
+
   const goNext = () => advanceTo((idx + 1) % items.length);
   const goPrev = () => advanceTo((idx - 1 + items.length) % items.length);
 
-  // Autoplay timer
+  // Autoplay timer — re-runs when slide changes, play state changes, or duration changes
   useEffect(() => {
     if (!isPlaying || !cur) return;
+    didAdvanceRef.current = false;  // new slide or new duration — reset guard
     const durationMs = (Number(cur.duration) || 10) * 1000;
     const tickMs = 100;
     let elapsed = 0;
 
-    timerRef.current && clearInterval(timerRef.current);
+    timerRef.current && clearTimeout(timerRef.current);
     progressRef.current && clearInterval(progressRef.current);
     setProgress(0);
 
@@ -167,16 +179,14 @@ function PreviewModal({ items, initialIndex = 0, name, transition, onClose }: { 
       setProgress(Math.min((elapsed / durationMs) * 100, 100));
     }, tickMs);
 
-    timerRef.current = setTimeout(() => {
-      advanceTo((idx + 1) % items.length);
-    }, durationMs);
+    timerRef.current = setTimeout(doAdvance, durationMs);
 
     return () => {
       timerRef.current && clearTimeout(timerRef.current);
       progressRef.current && clearInterval(progressRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx, isPlaying]);
+  }, [idx, isPlaying, cur?.duration]);
 
   // Render the current content
   function renderContent() {
@@ -279,9 +289,22 @@ function PreviewModal({ items, initialIndex = 0, name, transition, onClose }: { 
         />
       );
     }
-    if (cur.thumbLink || cur.permaLink) {
+    if (String(cur.contentType).toUpperCase() === 'VIDEO' && cur.permaLink) {
+      return (
+        <video
+          key={cur.permaLink}
+          src={cur.permaLink}
+          autoPlay
+          muted
+          playsInline
+          onEnded={doAdvance}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+        />
+      );
+    }
+    if (cur.permaLink || cur.thumbLink) {
       // eslint-disable-next-line @next/next/no-img-element
-      return <img src={cur.thumbLink || cur.permaLink} alt={cur.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;
+      return <img src={cur.permaLink || cur.thumbLink} alt={cur.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />;
     }
     return (
       <div style={{ color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
@@ -420,11 +443,11 @@ function WherePlayingModal({ playlistId, onClose }: { playlistId: string | numbe
       return;
     }
     // Fetch screens mapped to this playlist
-    cmsApi.get(`/screen`)
+    cmsApi.get('/sc/screen', { params: { page: 0, size: 200, sortBy: 'updatedDate', sortOrder: 'DESC' } })
       .then(res => {
-        const mapped = res.data?.content?.filter((s: any) => 
-          s.playlistId === playlistId || s.defaultPlaylistId === playlistId || s.fallbackPlaylistId === playlistId
-        ) || [];
+        const mapped = (res.data?.content || []).filter((s: any) =>
+          String(s.defaultShowAssetId) === String(playlistId) && s.defaultShowAssetType === 'PLAYLIST'
+        );
         setScreens(mapped);
       })
       .catch(err => {
@@ -532,6 +555,7 @@ export default function PlaylistEditorPage() {
             duration: c.duration || 10,
             contentType: c.contentType,
             permaLink: c.permaLink,
+            metadata: c.metadata,
           }))
           : [];
         setItems(contents);
@@ -547,7 +571,7 @@ export default function PlaylistEditorPage() {
     const enumMap: Record<string, string> = { Images: 'IMAGE', Videos: 'VIDEO' };
     try {
       const { data } = await cmsApi.get('/cc/content', {
-        params: { contentType: enumMap[sideTab], page: 0, size: 50, keyword: search || undefined }
+        params: { contentType: enumMap[sideTab], page: 0, size: 50, sortBy: 'updatedDate', sortOrder: 'DESC', keyword: search || undefined }
       });
       setAssets(Array.isArray(data) ? data : data?.content || []);
     } catch {
@@ -563,18 +587,46 @@ export default function PlaylistEditorPage() {
   function startEdit() { setNameInput(playlistName); setEditingName(true); }
   function confirmEdit() { const n = nameInput.trim() || 'New Playlist'; setPlaylistName(n); setEditingName(false); }
 
+  // ── Video duration auto-detect ──
+  function getVideoDuration(url: string): Promise<number> {
+    return new Promise(resolve => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => resolve(isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration) : 0);
+      v.onerror = () => resolve(0);
+      v.src = url;
+    });
+  }
+
+  // Tracks IDs of items awaiting auto-detect — cleared if user manually edits first
+  const pendingAutoDetect = React.useRef<Set<string | number>>(new Set());
+
   // ── Add to playlist ──
   function addItem(asset: ContentAsset) {
+    const initialDuration = asset.duration || 10;
     const item: PlaylistItem = {
       id: asset.id,
       name: asset.name,
       thumbLink: asset.thumbLink,
       permaLink: asset.permaLink,
-      duration: asset.duration || 10,
+      duration: initialDuration,
       contentType: asset.contentType,
     };
     setItems(prev => [...prev, item]);
     toast.success(`"${asset.name}" added`);
+
+    // Auto-detect actual video length — only applies if user hasn't manually edited duration first
+    if (String(asset.contentType).toUpperCase() === 'VIDEO' && asset.permaLink) {
+      pendingAutoDetect.current.add(asset.id);
+      getVideoDuration(asset.permaLink).then(secs => {
+        if (secs > 0 && pendingAutoDetect.current.has(asset.id)) {
+          pendingAutoDetect.current.delete(asset.id);
+          setItems(prev => prev.map(it =>
+            it.id === asset.id ? { ...it, duration: secs } : it
+          ));
+        }
+      });
+    }
   }
 
   function addAppItem(item: PlaylistItem) {
@@ -584,13 +636,19 @@ export default function PlaylistEditorPage() {
 
   // ── Duration control ──
   function changeDuration(idx: number, delta: number) {
-    setItems(prev => prev.map((it, i) =>
-      i === idx ? { ...it, duration: Math.max(1, (Number(it.duration) || 1) + delta) } : it
-    ));
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      pendingAutoDetect.current.delete(it.id);  // manual edit cancels auto-detect
+      return { ...it, duration: Math.max(1, (Number(it.duration) || 1) + delta) };
+    }));
   }
 
   function setDurationValue(idx: number, secs: number) {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, duration: secs } : it));
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      pendingAutoDetect.current.delete(it.id);  // manual edit cancels auto-detect
+      return { ...it, duration: secs };
+    }));
   }
 
   // ── Remove item ──
@@ -651,7 +709,7 @@ export default function PlaylistEditorPage() {
       setActiveAppModal({
         contentType: item.contentType,
         editIndex: idx,
-        initialData: item.metadata || { permaLink: item.permaLink, url: item.permaLink, name: item.name },
+        initialData: { ...item, ...(item.metadata || {}), url: item.permaLink },
         label: appDef?.label || 'App'
       });
     } else if (!item.contentType?.startsWith('APP_')) {
@@ -723,10 +781,12 @@ export default function PlaylistEditorPage() {
   }
 
   // ── Save app content item & return real database ID ──
-  async function saveAppContent(item: PlaylistItem): Promise<number> {
+  // Pass existingId > 0 to update an existing record via PUT; omit to create via POST.
+  async function saveAppContent(item: PlaylistItem, existingId = 0): Promise<number> {
     const typeMap: Record<string, string> = {
       APP_YOUTUBE: 'youtube',
       APP_HTML: 'website',
+      APP_WEBSITE: 'website',
       APP_ANNOUNCEMENT: 'announcement',
       APP_CANVA_PUBLIC: 'canva_public_view',
       APP_GOOGLE_SHEET: 'google_sheet',
@@ -741,7 +801,9 @@ export default function PlaylistEditorPage() {
       APP_ZONES: 'zones',
     };
     const type = typeMap[item.contentType || ''];
-    if (!type || (!item.permaLink && item.contentType !== 'APP_ZONES' && item.contentType !== 'APP_ANNOUNCEMENT')) return 0;
+    if (!type || (!item.permaLink && item.contentType !== 'APP_ZONES' && item.contentType !== 'APP_ANNOUNCEMENT')) {
+      throw new Error(`Cannot save content type: ${item.contentType}`);
+    }
     
     // Default body
     const body: any = {
@@ -868,8 +930,8 @@ export default function PlaylistEditorPage() {
     } else if (item.contentType === 'APP_ANNOUNCEMENT') {
       body.format = 'HTML';
       body.assetSourceType = '';
-      body.metadata = { 
-        text: item.permaLink || item.name,
+      body.metadata = {
+        text: item.metadata?.text || item.permaLink || item.name,
         font: 'Inter',
         fontColor: '#ffffff',
         backgroundColor: '#000000',
@@ -879,7 +941,13 @@ export default function PlaylistEditorPage() {
       };
     }
 
-    const { data } = await cmsApi.post(`/cc/content-save/${type}`, body);
+    let data;
+    if (existingId > 0) {
+      body.id = existingId;
+      ({ data } = await cmsApi.put(`/cc/content-save/${type}`, body));
+    } else {
+      ({ data } = await cmsApi.post(`/cc/content-save/${type}`, body));
+    }
     return data?.id ?? 0;
   }
 
@@ -888,17 +956,26 @@ export default function PlaylistEditorPage() {
     if (items.length === 0) { toast.warning('Add at least one item before saving'); return; }
     setSaving(true);
     try {
-      // Resolve any unsaved app items (those with string IDs like 'app_...') to real DB IDs
+      // Resolve app items: create new ones (app_* ids) and update edited existing ones (isDirty)
       const resolvedItems = await Promise.all(
         items.map(async (it, i) => {
           let resolvedId: string | number = it.id;
+          const isAppType = (it.contentType || '').startsWith('APP_');
           if (typeof it.id === 'string' && it.id.startsWith('app_')) {
+            // Brand-new app item — create via POST
             try {
               const newId = await saveAppContent(it);
               resolvedId = newId;
             } catch {
               toast.warning(`Could not save "${it.name}" — skipping it`);
               return null;
+            }
+          } else if (isAppType && it.isDirty && typeof it.id === 'number' && it.id > 0) {
+            // Existing app item that was edited — update via PUT
+            try {
+              await saveAppContent(it, it.id);
+            } catch {
+              // Non-fatal: keep the existing id even if update fails
             }
           }
           return { id: resolvedId, duration: it.duration, orderIndex: i, contentType: it.contentType, permaLink: it.permaLink, thumbLink: it.thumbLink, name: it.name };
@@ -913,12 +990,12 @@ export default function PlaylistEditorPage() {
         ROTATE: 'ROTATE_IN',
         FLIP: 'FLIP_IN'
       };
-      const apiType = transition.type === 'NONE' ? null : (uiToApiMap[transition.type] || transition.type);
+      const apiType = uiToApiMap[transition.type] || (transition.type === 'NONE' || !transition.type ? 'FADE_IN' : transition.type);
 
       const payload = {
         name: playlistName,
         transitionType: apiType,
-        transitionSpeed: transition.speed,
+        transitionSpeed: transition.speed || 'MEDIUM',
         contents: validContents,
       };
       if (isNew) {
@@ -1252,7 +1329,7 @@ export default function PlaylistEditorPage() {
             onEdit: (idx: number, item: PlaylistItem) => {
               setItems(prev => {
                 const copy = [...prev];
-                copy[idx] = { ...copy[idx], name: item.name, permaLink: item.permaLink, metadata: item.metadata };
+                copy[idx] = { ...copy[idx], name: item.name, permaLink: item.permaLink, metadata: item.metadata, thumbLink: item.thumbLink ?? copy[idx].thumbLink, duration: item.duration ?? copy[idx].duration, isDirty: true };
                 return copy;
               });
             },
@@ -1273,7 +1350,8 @@ export default function PlaylistEditorPage() {
             case 'APP_MICROSOFT_POWERBI': return <MicrosoftPowerBiAppModal {...commonProps} />;
             case 'APP_OUTLOOK_CALENDAR': return <OutlookCalendarAppModal {...commonProps} />;
             case 'APP_POSTER_MY_WALL': return <PosterMyWallAppModal {...commonProps} />;
-            case 'APP_HTML': return <WebsiteAppModal {...commonProps} />;
+            case 'APP_HTML':
+            case 'APP_WEBSITE': return <WebsiteAppModal {...commonProps} />;
             default: return null;
           }
         })()
@@ -1580,6 +1658,19 @@ export default function PlaylistEditorPage() {
         @keyframes pulse {
           0%, 100% { opacity: 1; } 50% { opacity: 0.45; }
         }
+
+        /* Playlist preview transition animations */
+        @keyframes plFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes plSlideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes plZoomIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
+        @keyframes plFlipIn { from { opacity: 0; transform: perspective(600px) rotateY(25deg); } to { opacity: 1; transform: perspective(600px) rotateY(0); } }
+        @keyframes plRotateIn { from { opacity: 0; transform: rotate(-6deg) scale(0.95); } to { opacity: 1; transform: rotate(0) scale(1); } }
+        .pl-anim-fade { animation: plFadeIn var(--dur, 400ms) ease; }
+        .pl-anim-slide { animation: plSlideIn var(--dur, 400ms) ease; }
+        .pl-anim-zoom { animation: plZoomIn var(--dur, 400ms) ease; }
+        .pl-anim-flip { animation: plFlipIn var(--dur, 400ms) ease; }
+        .pl-anim-rotate { animation: plRotateIn var(--dur, 400ms) ease; }
+        .pl-anim-none { animation: none; }
       `}</style>
     </div>
   );
