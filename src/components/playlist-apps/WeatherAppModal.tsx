@@ -94,6 +94,7 @@ export function WeatherAppModal({ editIndex, initialData, onAdd, onEdit, onClose
       thumbLink: '',
       duration: 15,
       contentType: 'APP_WEATHER',
+      permaLink: weatherData?.locationName || city,
       metadata: { city: weatherData?.locationName || city, unit, layout, forecastDays }
     };
     if (editIndex !== undefined) {

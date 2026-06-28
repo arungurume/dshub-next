@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
     if (!email) { toast.error('Please enter your email'); return; }
     setIsLoading(true);
     try {
-      await umsApi.post('/auth/forget/password', { email });
+      await umsApi.post('/forget/user/password', { email });
       toast.success(t('LOGIN.email_sent') || 'Reset instructions sent — check your inbox');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Could not send reset email');

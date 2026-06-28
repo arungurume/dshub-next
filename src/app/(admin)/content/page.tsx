@@ -6,7 +6,7 @@ import {
   FileVideo, ImageIcon, FileText, Music, Folder, FolderHeart, Upload, Search,
   LayoutGrid, List, RefreshCw, MoreVertical, Pencil, Trash2,
   FolderPlus, Eye, FolderInput, ChevronLeft, ChevronRight,
-  Play, FileIcon, Clock, Star, X, Check
+  Play, FileIcon, Clock, Star, X, Check, Download
 } from 'lucide-react';
 import { cmsApi } from '@/lib/api';
 
@@ -419,9 +419,9 @@ function ShowPlaylistsModal({ item, onClose }: { item: ContentItem; onClose: () 
 
 // ─── Item context menu ────────────────────────────────────────────────────────
 
-function ItemMenu({ item, isInsideFolder, onPreview, onRename, onAddFolder, onShowPlaylists, onDelete, onClose }: {
+function ItemMenu({ item, isInsideFolder, onPreview, onRename, onAddFolder, onShowPlaylists, onDownload, onDelete, onClose }: {
   item: ContentItem; isInsideFolder?: boolean; onPreview: () => void; onRename: () => void;
-  onAddFolder: () => void; onShowPlaylists: () => void;
+  onAddFolder: () => void; onShowPlaylists: () => void; onDownload: () => void;
   onDelete: () => void; onClose: () => void;
 }) {
   const isNotFolder = item.contentType !== 'FOLDER';
@@ -429,6 +429,9 @@ function ItemMenu({ item, isInsideFolder, onPreview, onRename, onAddFolder, onSh
     <div className="item-menu" onClick={(e) => e.stopPropagation()}>
       {isNotFolder && (
         <button className="item-menu-btn" onClick={() => { onPreview(); onClose(); }}><Eye size={13} /> Preview</button>
+      )}
+      {isNotFolder && item.permaLink && (
+        <button className="item-menu-btn" onClick={() => { onDownload(); onClose(); }}><Download size={13} /> Download</button>
       )}
       <button className="item-menu-btn" onClick={() => { onRename(); onClose(); }}><Pencil size={13} /> Rename</button>
       {isNotFolder && (
@@ -481,6 +484,13 @@ export default function ContentManagerPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Debounced search ──
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
   // ── Outside click for active menu ──
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -513,7 +523,7 @@ export default function ContentManagerPage() {
         sortOrder: 'DESC',
         contentType: filterType,
       };
-      if (search) params.search = search;
+      if (debouncedSearch) params.search = debouncedSearch;
 
       let url = filterType === 'FOLDER' ? '/dc/folder' : '/cc/content';
       if (activeFolder) {
@@ -544,7 +554,7 @@ export default function ContentManagerPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterType, sortMode, search, pagination.size, activeFolder]);
+  }, [filterType, sortMode, debouncedSearch, pagination.size, activeFolder]);
 
   useEffect(() => {
     fetchContent(0);
@@ -792,10 +802,19 @@ export default function ContentManagerPage() {
 
   const totalPages = Math.ceil(pagination.total / pagination.size);
 
-  // ── Filtered items by search ──
-  const displayed = search
-    ? items.filter(i => i.originalName.toLowerCase().includes(search.toLowerCase()))
-    : items;
+  const displayed = items;
+
+  // ── Download ──
+  function downloadItem(item: ContentItem) {
+    if (!item.permaLink) return;
+    const a = document.createElement('a');
+    a.href = item.permaLink;
+    a.download = item.originalName || item.name;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
 
   return (
     <div
@@ -834,22 +853,21 @@ export default function ContentManagerPage() {
               </button>
               <h2 className="folder-title"><Folder size={22} fill="currentColor" color="#000000" /> {activeFolder.name}</h2>
             </div>
-          ) : (
-            <div className="sort-toggle">
-              <button
-                id="filter-all"
-                className={`sort-btn${sortMode === 'all' ? ' active' : ''}`}
-                onClick={() => setSortMode('all')}
-              >All</button>
-              <button
-                id="filter-recent"
-                className={`sort-btn${sortMode === 'recent' ? ' active' : ''}`}
-                onClick={() => setSortMode('recent')}
-              >
-                <Clock size={12} />Recent
-              </button>
-            </div>
-          )}
+          ) : null}
+          <div className="sort-toggle">
+            <button
+              id="filter-all"
+              className={`sort-btn${sortMode === 'all' ? ' active' : ''}`}
+              onClick={() => setSortMode('all')}
+            >All</button>
+            <button
+              id="filter-recent"
+              className={`sort-btn${sortMode === 'recent' ? ' active' : ''}`}
+              onClick={() => setSortMode('recent')}
+            >
+              <Clock size={12} />Recent
+            </button>
+          </div>
         </div>
 
         <div className="toolbar-center">
@@ -899,10 +917,12 @@ export default function ContentManagerPage() {
           </div>
 
           {/* Actions */}
-          <button className="btn-secondary" onClick={() => setShowCreateFolder(true)} id="new-folder-btn">
-            <FolderPlus size={14} />
-            New Folder
-          </button>
+          {!activeFolder && (
+            <button className="btn-secondary" onClick={() => setShowCreateFolder(true)} id="new-folder-btn">
+              <FolderPlus size={14} />
+              New Folder
+            </button>
+          )}
           <button className="btn-primary" onClick={() => fileInputRef.current?.click()} id="upload-btn">
             <Upload size={14} />
             Upload
@@ -989,9 +1009,11 @@ export default function ContentManagerPage() {
                 id={`content-item-${item.id}`}
               >
                 {/* Thumbnail */}
-                <div className="card-thumb" 
-                     onClick={() => { if (item.contentType !== 'FOLDER') setPreviewItem(item); }}
-                     onDoubleClick={() => { if (item.contentType === 'FOLDER') setActiveFolder({ id: item.id, name: item.originalName }); }}>
+                <div className="card-thumb"
+                     onClick={() => {
+                       if (item.contentType === 'FOLDER') setActiveFolder({ id: item.id, name: item.originalName });
+                       else setPreviewItem(item);
+                     }}>
                   {item.thumbLink ? (
                     <img src={item.thumbLink} alt={item.originalName} className="thumb-img" />
                   ) : (
@@ -1017,7 +1039,12 @@ export default function ContentManagerPage() {
                     onClick={(e) => e.stopPropagation()}
                     id={`select-${item.id}`}
                   />
-                  <div className="card-name" title={item.originalName}>{item.originalName}</div>
+                  <div
+                    className="card-name"
+                    title={item.originalName}
+                    onClick={item.contentType === 'FOLDER' ? () => setActiveFolder({ id: item.id, name: item.originalName }) : undefined}
+                    style={item.contentType === 'FOLDER' ? { cursor: 'pointer', fontWeight: 600 } : undefined}
+                  >{item.originalName}</div>
 
                   <div className="card-menu-wrap">
                     <button
@@ -1033,6 +1060,7 @@ export default function ContentManagerPage() {
                         item={item}
                         isInsideFolder={!!activeFolder}
                         onPreview={() => setPreviewItem(item)}
+                        onDownload={() => downloadItem(item)}
                         onRename={() => setRenameItem(item)}
                         onAddFolder={() => setAddFolderItem(item)}
                         onShowPlaylists={() => setShowPlaylistsItem(item)}
@@ -1103,6 +1131,9 @@ export default function ContentManagerPage() {
                       <div className="list-actions">
                         {item.contentType !== 'FOLDER' && (
                           <button className="action-icon-btn" onClick={() => setPreviewItem(item)} title="Preview" id={`preview-${item.id}`}><Eye size={13} /></button>
+                        )}
+                        {item.contentType !== 'FOLDER' && item.permaLink && (
+                          <button className="action-icon-btn" onClick={() => downloadItem(item)} title="Download" id={`download-${item.id}`}><Download size={13} /></button>
                         )}
                         <button className="action-icon-btn" onClick={() => setRenameItem(item)} title="Rename" id={`rename-${item.id}`}><Pencil size={13} /></button>
                         {item.contentType !== 'FOLDER' && (

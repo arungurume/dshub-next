@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CalendarRange, ChevronLeft, ChevronRight, Clock, Globe
 } from 'lucide-react';
@@ -115,10 +115,10 @@ export default function CalendarPage() {
   const [tick, setTick] = useState(Date.now());
 
   // Live clock — update every 30s
-  useState(() => {
+  useEffect(() => {
     const id = setInterval(() => setTick(Date.now()), 30000);
     return () => clearInterval(id);
-  });
+  }, []);
 
   const days = useMemo(() => buildCalendarDays(viewDate.getFullYear(), viewDate.getMonth()), [viewDate]);
   const currentMonthDays = days.filter(d => d.getMonth() === viewDate.getMonth());

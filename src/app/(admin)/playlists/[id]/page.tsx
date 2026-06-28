@@ -757,7 +757,7 @@ export default function PlaylistEditorPage() {
 
     if (item.contentType === 'APP_WEATHER') {
       body.metadata = {
-        city: item.permaLink,
+        city: item.metadata?.city || item.permaLink,
         unit: 'C',
         layout: 'Temperature',
         forecastDays: 'Hourly',
@@ -765,6 +765,7 @@ export default function PlaylistEditorPage() {
         font: 'Inter',
         fontColor: '#ffffff',
         backgroundImage: '',
+        ...(item.metadata || {}),
       };
       body.format = 'HTML';
       body.assetSourceType = '';
@@ -853,15 +854,15 @@ export default function PlaylistEditorPage() {
       };
     } else if (item.contentType === 'APP_OUTLOOK_CALENDAR') {
       body.format = 'html';
-      body.assetSourceType = 'APP_OUTLOOK_CALENDAR';
+      body.assetSourceType = 'outlook_calendar';
       body.metadata = { url: item.permaLink, embedUrl: item.permaLink, ...(item.metadata || {}) };
     } else if (item.contentType === 'APP_MICROSOFT_EXCEL') {
       body.format = 'html';
-      body.assetSourceType = 'MICROSOFT_EXCEL';
+      body.assetSourceType = 'microsoft_excel';
       body.metadata = { url: item.permaLink, embedUrl: item.permaLink, ...(item.metadata || {}) };
     } else if (item.contentType === 'APP_MICROSOFT_POWERBI') {
       body.format = 'html';
-      body.assetSourceType = 'APP_MICROSOFT_POWERBI';
+      body.assetSourceType = 'microsoft_powerbi';
       body.metadata = { url: item.permaLink, embedUrl: item.permaLink, ...(item.metadata || {}) };
     } else if (item.contentType === 'APP_ANNOUNCEMENT') {
       body.format = 'HTML';

@@ -27,6 +27,8 @@ export function AnnouncementAppModal({ editIndex, initialData, onAdd, onEdit, on
       name: `Announcement`,
       thumbLink: '',
       duration: 15,
+      contentType: 'APP_ANNOUNCEMENT',
+      permaLink: text,
       metadata: { text, fontColor: textColor, backgroundColor: bgColor, textAlign, verticalAlign, fontSize, font: fontFamily, scrollingSpeed: 'Normal', direction: 'Left' }
     };
     if (editIndex !== undefined) {

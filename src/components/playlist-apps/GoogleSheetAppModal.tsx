@@ -44,8 +44,8 @@ export function GoogleSheetAppModal({ editIndex, initialData, onAdd, onEdit, onC
       thumbLink: '',
       duration: 15,
       contentType: 'APP_GOOGLE_SHEET',
-      permaLink: url.trim(),
-      metadata: { url: url.trim() }
+      permaLink: iframeUrl,
+      metadata: { url: iframeUrl, originalUrl: url.trim() }
     };
     if (editIndex !== undefined) {
       onEdit(editIndex, item);
