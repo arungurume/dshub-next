@@ -1729,7 +1729,7 @@ export default function SchedulesPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: var(--btn-cta-text);
           flex-shrink: 0;
           box-shadow: 0 4px 12px rgba(31,41,55,0.25);
         }
@@ -1746,7 +1746,7 @@ export default function SchedulesPage() {
         }
         .count-pill {
           background: var(--btn-cta-bg);
-          color: white;
+          color: var(--btn-cta-text);
           font-size: .7rem;
           font-weight: 700;
           padding: .25rem .65rem;
@@ -1785,7 +1785,7 @@ export default function SchedulesPage() {
         .vt-btn:hover { color: var(--text, #1f2937); }
         .vt-active {
           background: var(--accent) !important;
-          color: white !important;
+          color: var(--btn-cta-text) !important;
         }
 
         /* ── Search ──────────────────────────────────────────────────────── */
@@ -1880,8 +1880,8 @@ export default function SchedulesPage() {
           display: flex;
           align-items: center;
           gap: .75rem;
-          background: var(--btn-cta-bg);
-          color: white;
+          background: var(--inverse-bg);
+          color: var(--inverse-text);
           border-radius: 14px;
           padding: .7rem 1.25rem;
           margin-bottom: 1rem;
@@ -1894,9 +1894,9 @@ export default function SchedulesPage() {
           display: inline-flex;
           align-items: center;
           gap: .35rem;
-          background: rgba(255,255,255,.15);
-          border: 1px solid rgba(255,255,255,.2);
-          color: white;
+          background: var(--inverse-surface);
+          border: 1px solid var(--inverse-border);
+          color: var(--inverse-text);
           padding: .4rem .85rem;
           border-radius: 9px;
           font-size: .78rem;
@@ -1904,7 +1904,7 @@ export default function SchedulesPage() {
           transition: background .15s;
           font-weight: 600;
         }
-        .bulk-btn:hover { background: rgba(255,255,255,.25); }
+        .bulk-btn:hover { background: var(--inverse-surface-hover); }
         .bulk-danger { background: rgba(239,68,68,.3); border-color: rgba(239,68,68,.4); }
         .bulk-danger:hover { background: rgba(239,68,68,.45); }
 
@@ -1961,9 +1961,9 @@ export default function SchedulesPage() {
           overflow-y: auto;
         }
 
-        /* Overview header with gradient */
+        /* Overview header - always dark panel */
         .overview-header {
-          background: var(--btn-cta-bg);
+          background: var(--inverse-bg);
           padding: 1.25rem 1.1rem 1rem;
           display: flex;
           flex-direction: column;
@@ -1974,10 +1974,10 @@ export default function SchedulesPage() {
           width: 28px;
           height: 28px;
           border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.25);
-          background: rgba(255,255,255,0.12);
+          border: 1px solid var(--inverse-border);
+          background: var(--inverse-surface);
           cursor: pointer;
-          color: white;
+          color: var(--inverse-text);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1985,8 +1985,8 @@ export default function SchedulesPage() {
           align-self: flex-start;
         }
         .overview-header .cs-back-btn:hover {
-          background: rgba(255,255,255,0.22);
-          border-color: rgba(255,255,255,0.4);
+          background: var(--inverse-surface-hover);
+          border-color: var(--inverse-border);
         }
         .overview-title-area { display: flex; flex-direction: column; gap: .2rem; }
         .overview-label {
@@ -1994,7 +1994,7 @@ export default function SchedulesPage() {
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: .1em;
-          color: rgba(255,255,255,0.65);
+          color: var(--inverse-muted);
         }
         .overview-name-row {
           display: flex;
@@ -2005,7 +2005,7 @@ export default function SchedulesPage() {
         .overview-name {
           font-size: 1.05rem;
           font-weight: 700;
-          color: white;
+          color: var(--inverse-text);
           margin: 0;
           white-space: nowrap;
           overflow: hidden;
@@ -2014,11 +2014,11 @@ export default function SchedulesPage() {
           min-width: 0;
         }
         .overview-header .cs-edit-btn {
-          background: rgba(255,255,255,0.12);
-          border: 1px solid rgba(255,255,255,0.2);
+          background: var(--inverse-surface);
+          border: 1px solid var(--inverse-border);
           border-radius: 6px;
           cursor: pointer;
-          color: rgba(255,255,255,0.8);
+          color: var(--inverse-muted);
           padding: .25rem .35rem;
           display: flex;
           align-items: center;
@@ -2026,8 +2026,8 @@ export default function SchedulesPage() {
           flex-shrink: 0;
         }
         .overview-header .cs-edit-btn:hover {
-          background: rgba(255,255,255,0.22);
-          color: white;
+          background: var(--inverse-surface-hover);
+          color: var(--inverse-text);
         }
         .overview-status-badge {
           display: inline-flex;
@@ -2860,7 +2860,7 @@ export default function SchedulesPage() {
           align-items: center;
           gap: .5rem;
           background: var(--btn-cta-bg);
-          color: white;
+          color: var(--btn-cta-text);
           border: none;
           padding: .6rem 1.25rem;
           border-radius: 12px;

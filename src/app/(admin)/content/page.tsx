@@ -68,8 +68,8 @@ function ContentTypeIcon({ type, size = 16 }: { type: string; size?: number }) {
 
 function typeColor(type: string) {
   const map: Record<string, string> = {
-    VIDEO: 'var(--accent)', IMAGE: '#22c55e', AUDIO: '#f59e0b',
-    DOCUMENT: '#3b82f6', FOLDER: '#000000', TEMPLATE: '#ec4899',
+    VIDEO: 'var(--accent)', IMAGE: '#22C55E', AUDIO: '#F59E0B',
+    DOCUMENT: '#3B82F6', FOLDER: 'var(--text-muted)', TEMPLATE: '#06B6D4',
   };
   return map[type] || '#6b7280';
 }
@@ -1262,7 +1262,7 @@ export default function ContentManagerPage() {
           border: none; background: transparent; cursor: pointer; color: var(--text-muted);
           transition: all .15s;
         }
-        .sort-btn.active { background: var(--accent); color: white; }
+        .sort-btn.active { background: var(--accent); color: var(--btn-cta-text); }
 
         /* Type tabs */
         .type-tabs {
@@ -1333,7 +1333,7 @@ export default function ContentManagerPage() {
         /* Bulk bar */
         .bulk-bar {
           display: flex; align-items: center; gap: .75rem;
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--btn-cta-text);
           border-radius: 10px; padding: .6rem 1rem; margin-bottom: .75rem;
           font-size: .875rem; font-weight: 600;
         }

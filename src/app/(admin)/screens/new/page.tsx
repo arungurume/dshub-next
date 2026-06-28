@@ -736,7 +736,7 @@ export default function PairScreenPage() {
         }
         .radio-btn:last-child { border-right: none; }
         .radio-btn.selected {
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--btn-cta-text);
         }
         .radio-btn:not(.selected):hover { background: var(--sidebar-hover); }
 
@@ -844,7 +844,7 @@ export default function PairScreenPage() {
         .step-row { display: flex; align-items: flex-start; gap: .65rem; }
         .step-num {
           width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--btn-cta-text);
           font-size: .68rem; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
           margin-top: 1px;

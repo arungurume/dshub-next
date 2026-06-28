@@ -627,14 +627,14 @@ export default function DashboardMainPage() {
               </div>
             </div>
             <div className="db-stat-chip" onClick={() => router.push('/schedules')}>
-              <div className="db-stat-chip-icon purple"><Calendar size={13} /></div>
+              <div className="db-stat-chip-icon blue"><Calendar size={13} /></div>
               <div className="db-stat-chip-info">
                 <span className="db-stat-chip-val">{statsLoading ? '–' : stats.scheduledToday}</span>
                 <span className="db-stat-chip-lbl">Active Schedules</span>
               </div>
             </div>
             <div className="db-stat-chip" onClick={() => router.push('/playlists')}>
-              <div className="db-stat-chip-icon pink"><FolderHeart size={13} /></div>
+              <div className="db-stat-chip-icon cyan"><FolderHeart size={13} /></div>
               <div className="db-stat-chip-info">
                 <span className="db-stat-chip-val">{statsLoading ? '–' : stats.playlists}</span>
                 <span className="db-stat-chip-lbl">Playlists</span>
@@ -860,7 +860,7 @@ export default function DashboardMainPage() {
               <h3 className="db-operations-title">Signage Operations</h3>
               <div className="db-operations-grid">
                 <div className="db-ops-card" onClick={() => router.push('/content')}>
-                  <div className="db-ops-icon purple"><FileVideo size={16} /></div>
+                  <div className="db-ops-icon blue"><FileVideo size={16} /></div>
                   <div className="db-ops-texts">
                     <span className="db-ops-name">Upload Content</span>
                     <span className="db-ops-desc">Upload files & media</span>
@@ -868,7 +868,7 @@ export default function DashboardMainPage() {
                   <ChevronRight size={14} className="db-ops-arrow" />
                 </div>
                 <div className="db-ops-card" onClick={() => router.push('/playlists')}>
-                  <div className="db-ops-icon pink"><FolderHeart size={16} /></div>
+                  <div className="db-ops-icon cyan"><FolderHeart size={16} /></div>
                   <div className="db-ops-texts">
                     <span className="db-ops-name">Create Playlist</span>
                     <span className="db-ops-desc">Design loops & order</span>
@@ -937,9 +937,9 @@ export default function DashboardMainPage() {
                 {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val green-text">{stats.screensOnline}</span>}
               </div>
               <div className="db-widget-stat-row" onClick={() => router.push('/schedules')}>
-                <div className="db-widget-stat-icon purple"><Calendar size={12} /></div>
+                <div className="db-widget-stat-icon blue"><Calendar size={12} /></div>
                 <span className="db-widget-stat-label">Active Schedules</span>
-                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val purple-text">{stats.scheduledToday}</span>}
+                {statsLoading ? <div className="db-widget-spinner" /> : <span className="db-widget-stat-val blue-text">{stats.scheduledToday}</span>}
               </div>
               <div className="db-widget-stat-row" onClick={() => router.push('/playlists')}>
                 <div className="db-widget-stat-icon orange"><FolderHeart size={12} /></div>
@@ -1112,19 +1112,17 @@ export default function DashboardMainPage() {
         /* ─── HERO ─── */
         .db-compact-hero {
           position: relative;
-          background: linear-gradient(135deg, #4f46e5 0%, #7d2ae8 60%, #ec4899 100%);
+          background: var(--card-bg);
+          border: 1px solid var(--border);
           border-radius: 20px;
           padding: 2rem 2.25rem;
-          color: white;
+          color: var(--text);
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(125, 42, 232, 0.12);
+          box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
         }
 
         .db-hero-glass-shine {
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 60%);
-          pointer-events: none;
+          display: none;
         }
 
         .db-hero-inner {
@@ -1151,7 +1149,7 @@ export default function DashboardMainPage() {
           line-height: 1.5;
           margin: 0;
           max-width: 580px;
-          opacity: 0.92;
+          color: var(--text-muted);
           font-weight: 500;
         }
 
@@ -1159,19 +1157,19 @@ export default function DashboardMainPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.4rem;
-          background: rgba(0, 0, 0, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.15);
-          backdrop-filter: blur(8px);
+          background: var(--bg-base);
+          border: 1px solid var(--border);
           padding: 0.4rem 0.85rem;
           border-radius: 10px;
           font-size: 0.78rem;
           font-weight: 500;
           align-self: flex-start;
+          color: var(--text-muted);
         }
 
         .db-hero-credit-msg strong {
           font-weight: 800;
-          color: #fbbf24;
+          color: var(--text);
         }
 
         .db-hero-ctas {
@@ -1182,8 +1180,8 @@ export default function DashboardMainPage() {
         }
 
         .db-cta-primary {
-          background: white;
-          color: #7d2ae8;
+          background: var(--btn-cta-bg);
+          color: var(--btn-cta-text);
           border: none;
           font-weight: 700;
           font-size: 0.8rem;
@@ -1193,17 +1191,17 @@ export default function DashboardMainPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.4rem;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 2px 6px var(--btn-cta-shadow);
           transition: all 0.2s;
         }
 
         .db-cta-primary:hover {
           transform: translateY(-1px);
-          background: #fbfbfd;
+          background: var(--btn-cta-hover);
         }
 
         .db-cta-buy-credits {
-          background: #f59e0b;
+          background: var(--btn-billing-bg);
           color: white;
           border: none;
           font-weight: 700;
@@ -1214,19 +1212,19 @@ export default function DashboardMainPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.4rem;
-          box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.20);
           transition: all 0.2s;
         }
 
         .db-cta-buy-credits:hover {
           transform: translateY(-1px);
-          background: #e89209;
+          background: var(--btn-billing-hover);
         }
 
         .db-cta-secondary {
-          background: rgba(255, 255, 255, 0.12);
-          border: 1px solid rgba(255, 255, 255, 0.22);
-          color: white;
+          background: var(--btn-secondary-bg);
+          border: 1px solid var(--btn-secondary-border);
+          color: var(--btn-secondary-text);
           font-weight: 600;
           font-size: 0.8rem;
           padding: 0.6rem 1.2rem;
@@ -1235,20 +1233,19 @@ export default function DashboardMainPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.4rem;
-          backdrop-filter: blur(8px);
           transition: all 0.2s;
         }
 
         .db-cta-secondary:hover {
-          background: rgba(255, 255, 255, 0.18);
+          background: var(--btn-secondary-hover);
           transform: translateY(-1px);
         }
 
         .db-cta-screen {
-          background: #10b981;
-          color: white;
-          border: none;
-          font-weight: 700;
+          background: var(--btn-secondary-bg);
+          border: 1px solid var(--btn-secondary-border);
+          color: var(--btn-secondary-text);
+          font-weight: 600;
           font-size: 0.8rem;
           padding: 0.6rem 1.2rem;
           border-radius: 10px;
@@ -1256,13 +1253,12 @@ export default function DashboardMainPage() {
           display: inline-flex;
           align-items: center;
           gap: 0.4rem;
-          box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
           transition: all 0.2s;
         }
 
         .db-cta-screen:hover {
+          background: var(--btn-secondary-hover);
           transform: translateY(-1px);
-          background: #059669;
         }
 
         /* ─── QUICK STATS BAR ─── */
@@ -1276,17 +1272,19 @@ export default function DashboardMainPage() {
           background: var(--card-bg);
           border: 1px solid var(--border);
           border-radius: 14px;
-          padding: 0.75rem 0.85rem;
+          padding: 0.875rem 1rem;
           display: flex;
           align-items: center;
-          gap: 0.65rem;
+          gap: 0.75rem;
           cursor: pointer;
-          transition: all 0.15s;
+          transition: all 0.18s;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
         }
 
         .db-stat-chip:hover {
-          border-color: #7d2ae8;
-          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.06);
+          border-color: var(--border-color);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+          transform: translateY(-1px);
         }
 
         .db-stat-chip-icon {
@@ -1299,10 +1297,10 @@ export default function DashboardMainPage() {
           flex-shrink: 0;
         }
 
-        .db-stat-chip-icon.green { background: rgba(34, 197, 94, 0.08); color: #22c55e; }
-        .db-stat-chip-icon.purple { background: rgba(17, 17, 17, 0.06); color: #374151; }
-        .db-stat-chip-icon.pink { background: rgba(236, 72, 153, 0.08); color: #ec4899; }
-        .db-stat-chip-icon.indigo { background: rgba(55, 65, 81, 0.08); color: #374151; }
+        .db-stat-chip-icon.green  { background: rgba(22, 163, 74, 0.10); color: #16A34A; }
+        .db-stat-chip-icon.blue   { background: var(--icon-surface); color: var(--icon-color); }
+        .db-stat-chip-icon.cyan   { background: var(--icon-surface); color: var(--icon-color); }
+        .db-stat-chip-icon.indigo { background: var(--icon-surface); color: var(--icon-color); }
 
         .db-stat-chip-info {
           display: flex;
@@ -1310,16 +1308,20 @@ export default function DashboardMainPage() {
         }
 
         .db-stat-chip-val {
-          font-size: 1.1rem;
+          font-size: 1.3rem;
           font-weight: 800;
           color: var(--text);
-          line-height: 1.15;
+          line-height: 1.1;
+          letter-spacing: -0.02em;
         }
 
         .db-stat-chip-lbl {
-          font-size: 0.62rem;
+          font-size: 0.6rem;
           color: var(--text-muted);
-          font-weight: 600;
+          font-weight: 500;
+          margin-top: 1px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
         }
 
         /* ─── GETTING STARTED (new users) ─── */
@@ -1328,6 +1330,7 @@ export default function DashboardMainPage() {
           border: 1px solid var(--border);
           border-radius: 20px;
           padding: 1.5rem;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
         }
 
         .db-getting-started-title {
@@ -1362,7 +1365,7 @@ export default function DashboardMainPage() {
         }
 
         .db-step-card:hover {
-          border-color: #7d2ae8;
+          border-color: var(--accent);
           background: var(--card-bg);
         }
 
@@ -1370,8 +1373,8 @@ export default function DashboardMainPage() {
           width: 28px;
           height: 28px;
           border-radius: 50%;
-          background: linear-gradient(135deg, #7d2ae8, #ec4899);
-          color: white;
+          background: var(--btn-cta-bg);
+          color: var(--btn-cta-text);
           font-size: 0.72rem;
           font-weight: 800;
           display: flex;
@@ -1414,8 +1417,8 @@ export default function DashboardMainPage() {
         }
 
         .db-alt-browse-btn {
-          background: linear-gradient(135deg, #7d2ae8 0%, #ec4899 100%);
-          color: white;
+          background: var(--btn-cta-bg);
+          color: var(--btn-cta-text);
           border: none;
           padding: 0.45rem 1rem;
           border-radius: 8px;
@@ -1439,7 +1442,7 @@ export default function DashboardMainPage() {
           border: 1px solid var(--border);
           border-radius: 20px;
           padding: 1.25rem 1.5rem;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
           display: flex;
           flex-direction: column;
           gap: 1rem;
@@ -1500,7 +1503,8 @@ export default function DashboardMainPage() {
         }
 
         .db-search-input-premium:focus {
-          border-color: #7d2ae8;
+          border-color: var(--accent);
+          box-shadow: 0 0 0 3px var(--accent-light);
           background: var(--card-bg);
         }
 
@@ -1518,27 +1522,30 @@ export default function DashboardMainPage() {
 
         .db-pill-btn {
           flex-shrink: 0;
-          padding: 0.42rem 0.85rem;
-          border-radius: 20px;
+          padding: 0.3rem 0.75rem;
+          border-radius: 6px;
           border: 1px solid var(--border);
           background: var(--card-bg);
-          color: var(--text-muted);
+          color: #64748B;
           font-size: 0.72rem;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
           transition: all 0.15s;
+          white-space: nowrap;
         }
 
         .db-pill-btn:hover {
-          border-color: #7d2ae8;
-          color: #7d2ae8;
+          border-color: var(--border-color);
+          color: var(--text);
+          background: var(--sidebar-hover);
         }
 
         .db-pill-btn.active {
-          background: #7d2ae8;
-          color: white;
-          border-color: #7d2ae8;
-          box-shadow: 0 4px 10px rgba(125, 42, 232, 0.12);
+          background: var(--btn-cta-bg);
+          color: var(--btn-cta-text);
+          border-color: var(--btn-cta-bg);
+          font-weight: 600;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
         }
 
         /* Template cards - LARGER */
@@ -1551,19 +1558,19 @@ export default function DashboardMainPage() {
         .db-large-template-card {
           background: var(--card-bg);
           border: 1px solid var(--border);
-          border-radius: 16px;
+          border-radius: 14px;
           overflow: hidden;
           cursor: pointer;
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
           display: flex;
           flex-direction: column;
         }
 
         .db-large-template-card:hover {
-          transform: translateY(-3px);
-          border-color: #7d2ae8;
-          box-shadow: 0 12px 28px rgba(125, 42, 232, 0.1);
+          transform: translateY(-2px);
+          border-color: var(--border-color);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
         }
 
         .db-card-preview-container {
@@ -1622,8 +1629,8 @@ export default function DashboardMainPage() {
           color: white;
         }
 
-        .db-badge-credits.owned { background: #22c55e; }
-        .db-badge-credits.free { background: #3b82f6; }
+        .db-badge-credits.owned { background: #16A34A; }
+        .db-badge-credits.free { background: #6B7280; }
         .db-badge-credits.cost { background: #f59e0b; }
 
         .db-card-details-row {
@@ -1671,8 +1678,8 @@ export default function DashboardMainPage() {
         }
 
         .db-btn-card-preview:hover {
-          border-color: #7d2ae8;
-          color: #7d2ae8;
+          border-color: var(--accent);
+          color: var(--accent);
         }
 
         .db-btn-card-action {
@@ -1689,9 +1696,9 @@ export default function DashboardMainPage() {
           transition: all 0.15s;
         }
 
-        .db-btn-card-action.use { background: #7d2ae8; }
-        .db-btn-card-action.buy { background: linear-gradient(135deg, #7d2ae8 0%, #6d28d9 100%); }
-        .db-btn-card-action:hover { opacity: 0.9; transform: translateY(-1px); }
+        .db-btn-card-action.use { background: #16A34A; color: white; }
+        .db-btn-card-action.buy { background: var(--btn-cta-bg); color: var(--btn-cta-text); }
+        .db-btn-card-action:hover { opacity: 0.88; transform: translateY(-1px); }
 
         /* Recommended horizontal */
         .db-horizontal-recommended-row {
@@ -1714,9 +1721,9 @@ export default function DashboardMainPage() {
         }
 
         .db-recommended-card-item:hover {
-          border-color: #7d2ae8;
+          border-color: var(--border-color);
           transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(125, 42, 232, 0.06);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
 
         .db-recommended-thumb-area {
@@ -1776,6 +1783,7 @@ export default function DashboardMainPage() {
           border: 1px solid var(--border);
           border-radius: 20px;
           padding: 1.25rem 1.5rem;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
         }
 
         .db-operations-title {
@@ -1804,7 +1812,7 @@ export default function DashboardMainPage() {
         }
 
         .db-ops-card:hover {
-          border-color: #7d2ae8;
+          border-color: var(--accent);
           background: var(--card-bg);
         }
 
@@ -1818,10 +1826,10 @@ export default function DashboardMainPage() {
           flex-shrink: 0;
         }
 
-        .db-ops-icon.purple { background: rgba(17, 17, 17, 0.06); color: #374151; }
-        .db-ops-icon.pink { background: rgba(236, 72, 153, 0.08); color: #ec4899; }
-        .db-ops-icon.indigo { background: rgba(55, 65, 81, 0.08); color: #374151; }
-        .db-ops-icon.green { background: rgba(34, 197, 94, 0.08); color: #22c55e; }
+        .db-ops-icon.blue   { background: var(--icon-surface); color: var(--icon-color); }
+        .db-ops-icon.cyan   { background: var(--icon-surface); color: var(--icon-color); }
+        .db-ops-icon.indigo { background: var(--icon-surface); color: var(--icon-color); }
+        .db-ops-icon.green  { background: var(--icon-surface); color: var(--icon-color); }
 
         .db-ops-texts {
           flex: 1;
@@ -1857,29 +1865,29 @@ export default function DashboardMainPage() {
         }
 
         .db-sidebar-widget {
-          background: var(--card-bg);
+          background: var(--card-surface);
           border: 1px solid var(--border);
-          border-radius: 20px;
+          border-radius: 16px;
           padding: 1.25rem;
           display: flex;
           flex-direction: column;
-          gap: 0.85rem;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.01);
+          gap: 0.875rem;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
         }
 
         .db-widget-title {
-          font-size: 0.72rem;
+          font-size: 0.68rem;
           font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.06em;
+          letter-spacing: 0.07em;
           color: var(--text-muted);
           margin: 0;
         }
 
-        /* Credits Widget (enhanced) */
+        /* Credits Widget */
         .db-credits-widget {
-          background: linear-gradient(135deg, rgba(125, 42, 232, 0.03), rgba(236, 72, 153, 0.03));
-          border-color: rgba(125, 42, 232, 0.15);
+          background: var(--card-bg);
+          border-color: var(--border);
         }
 
         .db-sidebar-credits-box {
@@ -1894,10 +1902,7 @@ export default function DashboardMainPage() {
           font-weight: 800;
           color: var(--text);
           line-height: 1;
-          background: linear-gradient(135deg, #7d2ae8, #f59e0b);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          letter-spacing: -0.03em;
         }
 
         .db-credits-big-label {
@@ -1917,7 +1922,7 @@ export default function DashboardMainPage() {
 
         .db-credits-progress-horizontal-fill {
           height: 100%;
-          background: linear-gradient(90deg, #7d2ae8, #f59e0b);
+          background: var(--btn-cta-bg);
           border-radius: 10px;
         }
 
@@ -1940,7 +1945,7 @@ export default function DashboardMainPage() {
 
         .db-widget-buy-btn {
           width: 100%;
-          background: linear-gradient(135deg, #7d2ae8 0%, #ec4899 100%);
+          background: #F59E0B;
           color: white;
           border: none;
           padding: 0.55rem;
@@ -1952,12 +1957,12 @@ export default function DashboardMainPage() {
           align-items: center;
           justify-content: center;
           gap: 0.4rem;
-          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.15);
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
           transition: all 0.2s;
         }
 
         .db-widget-buy-btn:hover {
-          opacity: 0.92;
+          background: #D97706;
           transform: translateY(-1px);
         }
 
@@ -1971,17 +1976,18 @@ export default function DashboardMainPage() {
         .db-widget-stat-row {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.45rem 0.6rem;
+          gap: 0.6rem;
+          padding: 0.5rem 0.7rem;
           border-radius: 8px;
-          background: var(--sidebar-bg);
+          background: var(--bg-base);
           border: 1px solid var(--border);
           cursor: pointer;
-          transition: border-color 0.15s;
+          transition: all 0.15s;
         }
 
         .db-widget-stat-row:hover {
-          border-color: #7d2ae8;
+          border-color: var(--border-color);
+          background: var(--sidebar-hover);
         }
 
         .db-widget-stat-icon {
@@ -1993,50 +1999,53 @@ export default function DashboardMainPage() {
           justify-content: center;
         }
 
-        .db-widget-stat-icon.green { background: rgba(34, 197, 94, 0.07); color: #22c55e; }
-        .db-widget-stat-icon.purple { background: rgba(17, 17, 17, 0.06); color: #374151; }
-        .db-widget-stat-icon.orange { background: rgba(245, 158, 11, 0.07); color: #f59e0b; }
-        .db-widget-stat-icon.indigo { background: rgba(55, 65, 81, 0.08); color: #374151; }
+        .db-widget-stat-icon.green  { background: rgba(22, 163, 74, 0.10); color: #16A34A; }
+        .db-widget-stat-icon.blue   { background: var(--icon-surface); color: var(--icon-color); }
+        .db-widget-stat-icon.orange { background: var(--icon-surface); color: var(--icon-color); }
+        .db-widget-stat-icon.indigo { background: var(--icon-surface); color: var(--icon-color); }
 
         .db-widget-stat-label {
           font-size: 0.65rem;
           color: var(--text-muted);
           flex: 1;
+          font-weight: 400;
         }
 
         .db-widget-stat-val {
-          font-size: 0.7rem;
+          font-size: 0.82rem;
           font-weight: 800;
+          letter-spacing: -0.01em;
         }
 
-        .db-widget-stat-val.green-text { color: #22c55e; }
-        .db-widget-stat-val.purple-text { color: #111; }
+        .db-widget-stat-val.green-text { color: #16A34A; }
+        .db-widget-stat-val.blue-text  { color: var(--text); }
 
         .db-widget-spinner {
           width: 12px;
           height: 12px;
           border: 2px solid var(--border);
-          border-top-color: #7d2ae8;
+          border-top-color: var(--btn-cta-bg);
           border-radius: 50%;
           animation: db-spin-key 0.8s linear infinite;
         }
 
         /* Subscription */
         .db-sidebar-widget-sub {
-          background: rgba(125, 42, 232, 0.04);
-          border: 1px solid rgba(125, 42, 232, 0.15);
+          background: var(--bg-base);
+          border: 1px solid var(--border);
           border-radius: 12px;
-          padding: 0.65rem 0.85rem;
+          padding: 0.7rem 0.9rem;
           display: flex;
           flex-direction: column;
-          gap: 0.25rem;
+          gap: 0.3rem;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
         }
 
         .db-sub-plan-badge-compact {
           display: flex;
           align-items: center;
           gap: 0.25rem;
-          color: #7d2ae8;
+          color: var(--text);
           font-size: 0.68rem;
           font-weight: 700;
         }
@@ -2048,13 +2057,14 @@ export default function DashboardMainPage() {
 
         /* Compact Org Widget (bottom of sidebar) */
         .db-sidebar-widget-compact {
-          background: var(--card-bg);
+          background: var(--card-surface);
           border: 1px solid var(--border);
           border-radius: 12px;
-          padding: 0.75rem 0.85rem;
+          padding: 0.75rem 0.9rem;
           display: flex;
           flex-direction: column;
           gap: 0.45rem;
+          box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
         }
 
         .db-widget-org-compact-row {
@@ -2165,9 +2175,9 @@ export default function DashboardMainPage() {
         }
 
         .db-popover-item.active {
-          color: #7d2ae8;
+          color: var(--text);
           font-weight: 700;
-          background: rgba(125, 42, 232, 0.04);
+          background: var(--card-surface);
         }
 
         .db-popover-footer {
@@ -2180,7 +2190,7 @@ export default function DashboardMainPage() {
           width: 100%;
           background: none;
           border: none;
-          color: #7d2ae8;
+          color: var(--text);
           font-weight: 700;
           font-size: 0.68rem;
           display: flex;
@@ -2299,9 +2309,9 @@ export default function DashboardMainPage() {
         }
 
         .db-preview-badge {
-          background: rgba(125, 42, 232, 0.08);
-          border: 1px solid rgba(125, 42, 232, 0.2);
-          color: #7d2ae8;
+          background: var(--icon-surface);
+          border: 1px solid var(--border);
+          color: var(--icon-color);
           font-size: 0.62rem;
           font-weight: 700;
           padding: 0.15rem 0.5rem;
@@ -2315,9 +2325,9 @@ export default function DashboardMainPage() {
         }
 
         .db-preview-badge.green {
-          background: rgba(34, 197, 94, 0.08);
-          border-color: rgba(34, 197, 94, 0.2);
-          color: #22c55e;
+          background: rgba(22, 163, 74, 0.08);
+          border-color: rgba(22, 163, 74, 0.2);
+          color: #16A34A;
         }
 
         .db-preview-description {
@@ -2362,8 +2372,8 @@ export default function DashboardMainPage() {
         }
 
         .db-preview-action-btn.primary {
-          background: #7d2ae8;
-          color: white;
+          background: var(--btn-cta-bg);
+          color: var(--btn-cta-text);
           border: none;
         }
 
@@ -2543,11 +2553,11 @@ export default function DashboardMainPage() {
           transition: all .2s; position: relative; color: var(--text);
         }
         .dbc-pack-card:hover:not(:disabled) {
-          border-color: #111; background: rgba(17,17,17,.04);
-          transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.08);
+          border-color: var(--accent); background: var(--card-surface);
+          transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,.12);
         }
         .dbc-pack-card:disabled { opacity: .65; cursor: not-allowed; }
-        .dbc-pack-loading { border-color: #111 !important; }
+        .dbc-pack-loading { border-color: var(--accent) !important; }
 
         .dbc-pack-badge {
           position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
@@ -2570,7 +2580,7 @@ export default function DashboardMainPage() {
         }
         .dbc-pack-spinner {
           display: flex; align-items: center; gap: .35rem;
-          font-size: .75rem; color: #374151; margin-top: .35rem;
+          font-size: .75rem; color: var(--text-muted); margin-top: .35rem;
         }
 
         .dbc-pack-summary {
@@ -2579,7 +2589,7 @@ export default function DashboardMainPage() {
           border-radius: 12px; padding: .75rem 1rem;
           margin-bottom: 1.25rem; font-size: .875rem; color: var(--text-muted);
         }
-        .dbc-pack-summary svg { color: #374151; flex-shrink: 0; }
+        .dbc-pack-summary svg { color: var(--text-muted); flex-shrink: 0; }
 
         .dbc-pack-note {
           display: flex; align-items: center; gap: .4rem;
@@ -2592,7 +2602,7 @@ export default function DashboardMainPage() {
         .dbc-field { display: flex; flex-direction: column; gap: .4rem; }
         .dbc-label { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
         .dbc-stripe-el { background: var(--sidebar-bg); border: 1px solid var(--border); border-radius: 10px; padding: .75rem 1rem; }
-        .dbc-stripe-el:focus-within { border-color: #111; }
+        .dbc-stripe-el:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
         .dbc-field-err { font-size: .75rem; color: #ef4444; margin: 0; }
         .dbc-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         .dbc-form-footer { display: flex; align-items: center; justify-content: space-between; padding-top: .5rem; }
@@ -2627,8 +2637,8 @@ export default function DashboardMainPage() {
         .unlock-confirm-actions { display: flex; gap: .75rem; }
         .unlock-confirm-actions .btn-cancel { flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text); padding: .6rem; border-radius: 10px; font-size: .85rem; cursor: pointer; }
         .unlock-confirm-actions .btn-cancel:hover { background: var(--sidebar-bg); }
-        .unlock-confirm-actions .btn-confirm { flex: 2; background: #111; color: #fff; border: none; padding: .65rem; border-radius: 10px; font-size: .85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .4rem; }
-        .unlock-confirm-actions .btn-confirm:hover { background: #222; }
+        .unlock-confirm-actions .btn-confirm { flex: 2; background: var(--btn-cta-bg); color: var(--btn-cta-text); border: none; padding: .65rem; border-radius: 10px; font-size: .85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .4rem; }
+        .unlock-confirm-actions .btn-confirm:hover { background: var(--btn-cta-hover); }
         .unlock-confirm-actions .btn-confirm:disabled { opacity: .65; cursor: not-allowed; }
       `}</style>
 

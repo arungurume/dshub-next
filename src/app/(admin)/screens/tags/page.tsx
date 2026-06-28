@@ -386,7 +386,7 @@ export default function ScreenTagsPage() {
         .back-btn:hover { border-color: var(--accent); color: var(--accent); }
         .header-icon { color: var(--accent); }
         .page-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
-        .count-pill { background: var(--accent); color: white; font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; }
+        .count-pill { background: var(--accent); color: var(--btn-cta-text); font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; }
         .toolbar-right { display: flex; align-items: center; gap: .75rem; }
 
         .page-loading, .page-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; padding: 4rem; color: var(--text-muted); text-align: center; }

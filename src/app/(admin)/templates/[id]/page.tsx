@@ -798,7 +798,7 @@ export default function DsTemplateDetailPage() {
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(125, 42, 232, 0.15);
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -806,7 +806,7 @@ export default function DsTemplateDetailPage() {
         .btn-unlock-action:hover {
           background: #6a21cb;
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.25);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
         .btn-unlock-action:active {
           transform: translateY(0);
@@ -838,9 +838,9 @@ export default function DsTemplateDetailPage() {
           font-size: 0.78rem;
           color: var(--text-muted);
           padding: 0.4rem 0.75rem;
-          background: rgba(125, 42, 232, 0.06);
+          background: rgba(37, 99, 235, 0.06);
           border-radius: 8px;
-          border: 1px solid rgba(125, 42, 232, 0.12);
+          border: 1px solid rgba(37, 99, 235, 0.12);
         }
         .unlock-cost-summary strong { color: var(--text-primary); }
         .cost-arrow { color: #7D2AE8; font-weight: 700; }

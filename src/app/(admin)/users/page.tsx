@@ -490,7 +490,7 @@ export default function UsersPage() {
         .toolbar-left { display: flex; align-items: center; gap: .75rem; }
         .page-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
         .count-badge {
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--btn-cta-text);
           font-size: .7rem; font-weight: 700; padding: .2rem .6rem;
           border-radius: 999px;
         }

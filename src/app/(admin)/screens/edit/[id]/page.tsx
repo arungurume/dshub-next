@@ -357,7 +357,7 @@ export default function EditScreenPage() {
         }
         .radio-btn:last-child { border-right: none; }
         .radio-btn.selected {
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--btn-cta-text);
         }
         .radio-btn:not(.selected):hover { background: var(--sidebar-hover); }
 

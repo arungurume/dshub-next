@@ -881,7 +881,7 @@ export default function PlaylistsPage() {
         .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: .75rem; }
         .toolbar-left { display: flex; align-items: center; gap: .75rem; }
         .page-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
-        .count-pill { background: var(--accent); color: white; font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; }
+        .count-pill { background: var(--accent); color: var(--btn-cta-text); font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; }
         .toolbar-right { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
         .search-wrap { position: relative; }
         .search-ic { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
@@ -892,7 +892,7 @@ export default function PlaylistsPage() {
         .view-toggle { display: flex; background: var(--sidebar-bg); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
         .vt-btn { display: inline-flex; align-items: center; justify-content: center; padding: .45rem .65rem; font-size: .8rem; border: none; background: transparent; cursor: pointer; color: var(--text-muted); transition: all .15s; }
         .vt-btn:hover { color: var(--text); }
-        .vt-active { background: var(--accent) !important; color: white !important; }
+        .vt-active { background: var(--accent) !important; color: var(--btn-cta-text) !important; }
 
         /* ── Bulk bar ── */
         .bulk-bar { display: flex; align-items: center; gap: .75rem; padding: .65rem 1rem; background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.3); border-radius: 12px; margin-bottom: 1rem; }
@@ -912,9 +912,9 @@ export default function PlaylistsPage() {
         .pl-card-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
         .pl-check { position: absolute; top: .75rem; right: .75rem; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--sidebar-bg); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
         .pl-check:hover { border-color: var(--accent); }
-        .pl-check-on { background: var(--accent); border-color: var(--accent); color: white; }
+        .pl-check-on { background: var(--accent); border-color: var(--accent); color: var(--btn-cta-text); }
         .pl-card-top { display: flex; align-items: flex-start; gap: 1rem; padding-right: 1.5rem; }
-        .pl-icon { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; background: var(--btn-cta-bg); display: flex; align-items: center; justify-content: center; color: white; }
+        .pl-icon { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; background: var(--btn-cta-bg); display: flex; align-items: center; justify-content: center; color: var(--btn-cta-text); }
         .pl-meta { flex: 1; min-width: 0; }
         .pl-name { font-size: .95rem; font-weight: 700; margin: 0 0 .2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .pl-date { font-size: .75rem; color: var(--text-muted); margin: 0; }
@@ -940,11 +940,11 @@ export default function PlaylistsPage() {
         .cell-muted { color: var(--text-muted); font-size: .825rem; }
         .inline-icon { vertical-align: middle; margin-right: .25rem; }
         .tbl-name-cell { display: flex; align-items: center; gap: .75rem; }
-        .tbl-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--btn-cta-bg); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+        .tbl-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--btn-cta-bg); display: flex; align-items: center; justify-content: center; color: var(--btn-cta-text); flex-shrink: 0; }
         .tbl-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
         .tbl-check { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--border); background: var(--sidebar-bg); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
         .tbl-check:hover { border-color: var(--accent); }
-        .tbl-check-on { background: var(--accent); border-color: var(--accent); color: white; }
+        .tbl-check-on { background: var(--accent); border-color: var(--accent); color: var(--btn-cta-text); }
         .action-row { display: flex; gap: .25rem; }
         .action-btn { width: 28px; height: 28px; border-radius: 7px; border: none; background: transparent; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: all .15s; }
         .action-btn:hover { background: var(--sidebar-hover); color: var(--text); }
@@ -1013,7 +1013,7 @@ export default function PlaylistsPage() {
         .preview-item:hover { background: var(--sidebar-hover); }
         .preview-item-active { background: rgba(99,102,241,.08); border-left: 2px solid var(--accent); }
         .preview-item-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); }
-        .preview-item-placeholder { display: flex; align-items: center; justify-content: center; background: var(--btn-cta-bg); color: white; font-weight: 700; font-size: .8rem; }
+        .preview-item-placeholder { display: flex; align-items: center; justify-content: center; background: var(--btn-cta-bg); color: var(--btn-cta-text); font-weight: 700; font-size: .8rem; }
         .preview-item-info { min-width: 0; flex: 1; }
         .preview-item-name { display: block; font-size: .75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .preview-item-dur { display: flex; align-items: center; gap: .2rem; font-size: .65rem; color: var(--text-muted); margin-top: .15rem; }

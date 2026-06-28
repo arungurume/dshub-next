@@ -84,9 +84,8 @@ export const Sidebar: React.FC = () => {
         key={item.path}
         onClick={() => handleNav(item.path)}
         style={isActive ? {
-          background: 'var(--btn-cta-bg)',
-          color: 'var(--btn-cta-text)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          background: 'var(--nav-active-bg)',
+          color: 'var(--nav-active-text)',
         } : {
           color: 'var(--text-muted)',
           background: 'transparent',
@@ -192,9 +191,15 @@ export const Sidebar: React.FC = () => {
           background: var(--sidebar-hover) !important;
           color: var(--text) !important;
         }
+        .nav-item-active {
+          box-shadow: inset 3px 0 0 var(--nav-active-indicator);
+        }
+        .nav-item-active .shrink-0 {
+          color: var(--nav-active-text);
+        }
         .sidebar-toggle-btn:hover {
-          border-color: var(--accent) !important;
-          color: var(--accent) !important;
+          border-color: var(--border-color) !important;
+          color: var(--text) !important;
         }
       `}</style>
     </aside>

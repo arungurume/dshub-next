@@ -562,14 +562,14 @@ export default function ScreensPage() {
         .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: .75rem; }
         .toolbar-left { display: flex; align-items: center; gap: .75rem; }
         .page-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
-        .count-pill { background: var(--accent); color: white; font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; }
+        .count-pill { background: var(--accent); color: var(--btn-cta-text); font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px; }
         .toolbar-right { display: flex; align-items: center; gap: .75rem; }
         .search-wrap { position: relative; }
         .search-ic { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
         .search-input { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: .55rem 1rem .55rem 2.1rem; font-size: .875rem; color: var(--text); outline: none; width: 220px; }
         .search-input:focus { border-color: var(--accent); }
 
-        .bulk-bar { display: flex; align-items: center; gap: .75rem; background: var(--accent); color: white; border-radius: 10px; padding: .6rem 1rem; margin-bottom: .75rem; font-size: .875rem; font-weight: 600; }
+        .bulk-bar { display: flex; align-items: center; gap: .75rem; background: var(--accent); color: var(--btn-cta-text); border-radius: 10px; padding: .6rem 1rem; margin-bottom: .75rem; font-size: .875rem; font-weight: 600; }
         .bulk-btn { display: inline-flex; align-items: center; gap: .35rem; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2); color: white; padding: .35rem .75rem; border-radius: 8px; font-size: .78rem; cursor: pointer; }
         .bulk-danger { background: rgba(239,68,68,.3); border-color: rgba(239,68,68,.4); }
 

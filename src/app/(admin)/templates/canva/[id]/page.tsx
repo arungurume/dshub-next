@@ -577,12 +577,12 @@ export default function CanvaDesignDetailPage() {
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s ease;
-          box-shadow: 0 2px 8px rgba(125, 42, 232, 0.15);
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
         }
         .btn-primary:hover {
           background: #6a21cb;
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(125, 42, 232, 0.25);
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
         .btn-primary:active {
           transform: translateY(0);

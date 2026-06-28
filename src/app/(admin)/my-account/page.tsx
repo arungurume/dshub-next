@@ -572,7 +572,7 @@ export default function MyAccountPage() {
         .avatar-upload-btn {
           position: absolute; bottom: 0; right: 0;
           width: 24px; height: 24px; border-radius: 50%;
-          background: var(--accent); color: white; border: none; cursor: pointer;
+          background: var(--accent); color: var(--btn-cta-text); border: none; cursor: pointer;
           display: flex; align-items: center; justify-content: center;
         }
         .account-name { font-size: 1.25rem; font-weight: 700; margin: 0 0 .25rem; }
@@ -602,8 +602,8 @@ export default function MyAccountPage() {
           transition: all .15s; width: 100%;
         }
         .account-tab-btn:hover { background: var(--sidebar-hover); color: var(--text); }
-        .account-tab-btn.active { background: var(--accent); color: white; }
-        .account-tab-btn.active .tab-chevron { color: white; }
+        .account-tab-btn.active { background: var(--accent); color: var(--btn-cta-text); }
+        .account-tab-btn.active .tab-chevron { color: var(--btn-cta-text); }
         .tab-chevron { margin-left: auto; opacity: .5; }
         .account-tab-btn.active .tab-chevron { opacity: 1; }
 
@@ -695,12 +695,12 @@ export default function MyAccountPage() {
           padding: .45rem 1rem; border-radius: 8px; font-size: .8rem; font-weight: 600;
           border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: all .15s;
         }
-        .billing-sub-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .billing-sub-btn.active { background: var(--accent); color: var(--btn-cta-text); border-color: var(--accent); }
         .billing-sub-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
 
         /* Plan summary */
         .plan-summary-card { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; border: 1px solid rgba(99,102,241,.3); border-radius: 12px; background: linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.06)); margin-bottom: 1.25rem; }
-        .plan-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
+        .plan-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: var(--btn-cta-text); flex-shrink: 0; }
         .plan-name-lg { font-size: 1rem; font-weight: 700; margin: 0; }
         .plan-meta-sm { font-size: .78rem; color: var(--text-muted); margin: .15rem 0 0; }
         .plan-summary-card > button { margin-left: auto; }

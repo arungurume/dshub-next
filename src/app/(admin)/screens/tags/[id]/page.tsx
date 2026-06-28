@@ -450,7 +450,7 @@ export default function ScreenTagDetailPage() {
         .toolbar-left { display:flex; align-items:center; gap:.75rem; }
         .back-btn { width:34px; height:34px; border-radius:8px; border:1px solid var(--border); background:var(--sidebar-bg); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); transition:all .15s; }
         .back-btn:hover { border-color:var(--accent); color:var(--accent); }
-        .tag-icon-wrap { width:40px; height:40px; border-radius:12px; background:var(--btn-cta-bg); display:flex; align-items:center; justify-content:center; color:white; box-shadow:0 4px 12px rgba(31,41,55,.25); flex-shrink:0; }
+        .tag-icon-wrap { width:40px; height:40px; border-radius:12px; background:var(--btn-cta-bg); display:flex; align-items:center; justify-content:center; color:var(--btn-cta-text); box-shadow:0 4px 12px rgba(0,0,0,.20); flex-shrink:0; }
         .page-title { font-size:1.2rem; font-weight:700; margin:0 0 .1rem; }
         .page-sub { font-size:.75rem; color:var(--text-muted); margin:0; }
 
@@ -500,7 +500,7 @@ export default function ScreenTagDetailPage() {
         .picker-row-active { background:rgba(31,41,55,.07) !important; }
         .picker-row-disabled { opacity:.5; cursor:not-allowed; }
         .picker-thumb { width:36px; height:36px; border-radius:7px; object-fit:cover; flex-shrink:0; border:1px solid var(--border); }
-        .picker-thumb-ph { width:36px; height:36px; border-radius:7px; background:var(--btn-cta-bg); display:flex; align-items:center; justify-content:center; color:white; flex-shrink:0; }
+        .picker-thumb-ph { width:36px; height:36px; border-radius:7px; background:var(--btn-cta-bg); display:flex; align-items:center; justify-content:center; color:var(--btn-cta-text); flex-shrink:0; }
         .picker-item-info { flex:1; min-width:0; display:flex; flex-direction:column; gap:.1rem; }
         .picker-item-name { font-size:.8rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .picker-item-type { font-size:.62rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
@@ -511,7 +511,7 @@ export default function ScreenTagDetailPage() {
         /* ── Screens panel ── */
         .screens-panel { display:flex; flex-direction:column; gap:1.1rem; }
         .screens-header { display:flex; align-items:center; gap:.6rem; }
-        .count-pill { background:var(--btn-cta-bg); color:white; font-size:.7rem; font-weight:700; padding:.2rem .55rem; border-radius:999px; }
+        .count-pill { background:var(--btn-cta-bg); color:var(--btn-cta-text); font-size:.7rem; font-weight:700; padding:.2rem .55rem; border-radius:999px; }
 
         .screens-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.75rem; background:var(--card-bg); border:1px solid var(--border); border-radius:18px; padding:4rem 2rem; text-align:center; color:var(--text-muted); }
         .screens-empty h4 { font-size:.95rem; font-weight:600; margin:0; color:var(--text); }

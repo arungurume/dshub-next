@@ -300,7 +300,7 @@ export default function LocationsPage() {
         .toolbar-left { display: flex; align-items: center; gap: .75rem; }
         .page-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
         .count-pill {
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--btn-cta-text);
           font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px;
         }
 
@@ -335,7 +335,7 @@ export default function LocationsPage() {
         .default-ribbon {
           position: absolute; top: 1rem; right: 1rem;
           display: flex; align-items: center; gap: .3rem;
-          background: var(--accent); color: white;
+          background: var(--accent); color: var(--btn-cta-text);
           font-size: .65rem; font-weight: 700; letter-spacing: .05em;
           padding: .25rem .6rem; border-radius: 999px; text-transform: uppercase;
         }
