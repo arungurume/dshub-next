@@ -819,7 +819,8 @@ export default function PlaylistEditorPage() {
       body.metadata = {
         htmlContent: item.permaLink,
         url: item.permaLink,
-        preRender: false
+        preRender: item.metadata?.preRender ?? false,
+        ...(item.metadata || {})
       };
     } else if (item.contentType === 'APP_CANVA_PUBLIC') {
       body.format = 'html';

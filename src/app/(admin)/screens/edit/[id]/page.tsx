@@ -20,6 +20,7 @@ export default function EditScreenPage() {
   const [name, setName] = useState('');
   const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
   const [placedAt, setPlacedAt] = useState('');
+  const [location, setLocation] = useState('');
   const [selectedTagId, setSelectedTagId] = useState(0);
   const [selectedScheduleId, setSelectedScheduleId] = useState(0);
 
@@ -45,6 +46,7 @@ export default function EditScreenPage() {
       setName(s.name || '');
       setOrientation(s.orientation || 'horizontal');
       setPlacedAt(s.placedAt || '');
+      setLocation(s.location || '');
       setSelectedTagId(s.screenGroupId || 0);
       setSelectedScheduleId(s.selectedScheduleId || 0);
       setDefaultShowAssetType(s.defaultShowAssetType || 'NONE');
@@ -71,6 +73,7 @@ export default function EditScreenPage() {
         name: name.trim(),
         orientation,
         placedAt: placedAt.trim(),
+        location: location.trim(),
         screenGroupId: selectedTagId,
         selectedScheduleId,
         defaultShowAssetType,
@@ -189,6 +192,17 @@ export default function EditScreenPage() {
               value={placedAt}
               onChange={e => setPlacedAt(e.target.value)}
               placeholder="e.g. Main lobby, 2nd floor"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="field-label"><MapPin size={13} /> Location (Address)</label>
+            <input
+              id="location-input"
+              className="form-input"
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="e.g. 123 Main St, New York, NY"
             />
           </div>
 

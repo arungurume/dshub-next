@@ -171,15 +171,104 @@ export function PosterMyWallAppModal(props: any) {
   />;
 }
 
-export function WebsiteAppModal(props: any) {
-  return <BaseIframeModal 
-    {...props} 
-    title="Website" 
-    inputLabel="Website URL" 
-    inputPlaceholder="https://www.example.com" 
-    contentType="APP_HTML" 
-    validator={url => url.startsWith('http')}
-  />;
+export function WebsiteAppModal({ editIndex, initialData, onAdd, onEdit, onClose }: {
+  editIndex?: number;
+  initialData?: any;
+  onAdd: (item: PlaylistItem) => void;
+  onEdit: (idx: number, item: PlaylistItem) => void;
+  onClose: () => void;
+}) {
+  const [url, setUrl] = React.useState(initialData?.url || initialData?.permaLink || '');
+  const [name, setName] = React.useState(initialData?.name || initialData?.title || '');
+  const [preRender, setPreRender] = React.useState<boolean>(initialData?.preRender ?? initialData?.metadata?.preRender ?? false);
+
+  const isValid = url.trim().startsWith('http');
+
+  function save() {
+    if (!url.trim() || !isValid) return;
+    const item: PlaylistItem = {
+      id: `app_${Date.now()}`,
+      name: name.trim() || 'Website',
+      thumbLink: '',
+      duration: 15,
+      contentType: 'APP_HTML',
+      permaLink: url.trim(),
+      metadata: { url: url.trim(), preRender }
+    };
+    if (editIndex !== undefined) {
+      onEdit(editIndex, item);
+    } else {
+      onAdd(item);
+    }
+    onClose();
+  }
+
+  return (
+    <div className="pl-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
+      <div className="pl-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 960, minHeight: 600, display: 'flex', flexDirection: 'column' }}>
+        <div className="pl-modal-hd">
+          <h3>Configure Website</h3>
+          <button className="pl-modal-x" onClick={onClose}><X size={16} /></button>
+        </div>
+        <div className="pl-modal-bd" style={{ flex: 1, display: 'flex', flexDirection: 'row', gap: 24, padding: '20px' }}>
+          <div style={{ flex: '0 0 320px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <p className="pl-label">Label (optional)</p>
+              <input className="pl-input" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. My Website" autoFocus />
+            </div>
+            <div>
+              <p className="pl-label">Website URL</p>
+              <textarea className="pl-input" style={{ minHeight: '120px', resize: 'vertical' }} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://www.example.com" />
+              {!isValid && url.length > 0 && (
+                <p style={{ color: '#e74c3c', fontSize: '0.75rem', marginTop: '4px' }}>Please enter a valid URL starting with http.</p>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+              <input
+                type="checkbox"
+                id="prerender-toggle"
+                checked={preRender}
+                onChange={e => setPreRender(e.target.checked)}
+                style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }}
+              />
+              <label htmlFor="prerender-toggle" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)', cursor: 'pointer', userSelect: 'none' }}>
+                Pre-render (for sites that block iframes)
+              </label>
+            </div>
+            <div style={{ padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+              <p style={{ margin: 0 }}><strong>Note:</strong> Some websites block embedding in iframes. Enable Pre-render if the preview is blank or the site refuses to load.</p>
+            </div>
+          </div>
+          <PreviewTVBezel>
+            {isValid && url ? (
+              <iframe
+                width="100%"
+                height="100%"
+                src={url}
+                title="Website Preview"
+                frameBorder="0"
+                allowFullScreen
+                style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+              ></iframe>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.3)' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '24px', borderRadius: '50%', marginBottom: '16px' }}>
+                  <Globe size={48} strokeWidth={1.5} />
+                </div>
+                <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)' }}>Enter a valid URL to see preview</p>
+              </div>
+            )}
+          </PreviewTVBezel>
+        </div>
+        <div className="pl-modal-ft">
+          <button className="pl-btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="pl-btn-primary" onClick={save} disabled={!url.trim() || !isValid}>
+            {editIndex !== undefined ? 'Save' : 'Add'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function transformCalendarUrl(url: string, title?: string): string {

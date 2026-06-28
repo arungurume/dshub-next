@@ -170,6 +170,7 @@ export default function PairScreenPage() {
   const [screenName, setScreenName] = useState('');
   const [orientation, setOrientation] = useState<'horizontal' | 'vertical'>('horizontal');
   const [placedAt, setPlacedAt] = useState('');
+  const [location, setLocation] = useState('');
   const [defaultShowAssetType, setDefaultShowAssetType] = useState<'NONE' | 'MEDIA' | 'PLAYLIST'>('NONE');
   const [defaultShowAssetId, setDefaultShowAssetId] = useState<string | number>('');
   const [defaultShowAssetName, setDefaultShowAssetName] = useState<string>('');
@@ -276,6 +277,7 @@ export default function PairScreenPage() {
         pairCode: pairCode.trim().toUpperCase(),
         orientation,
         placedAt: placedAt.trim(),
+        location: location.trim(),
         screenGroupId: selectedTag.id,
         selectedScheduleId: selectedSchedule.id,
         defaultShowAssetType,
@@ -484,6 +486,20 @@ export default function PairScreenPage() {
                 placeholder="Lobby"
                 value={placedAt}
                 onChange={e => setPlacedAt(e.target.value)}
+                disabled={isDisabled}
+              />
+            </div>
+
+            {/* Location (Address) */}
+            <div className="form-ctrl">
+              <label>Location (Address)</label>
+              <input
+                id="location-input"
+                type="text"
+                className={`form-field ${isDisabled ? 'field-disabled' : ''}`}
+                placeholder="e.g. 123 Main St, New York, NY"
+                value={location}
+                onChange={e => setLocation(e.target.value)}
                 disabled={isDisabled}
               />
             </div>
