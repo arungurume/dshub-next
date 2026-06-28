@@ -600,7 +600,7 @@ export default function DashboardMainPage() {
                     <Sparkles size={14} />
                     <span>Browse Templates</span>
                   </button>
-                  <button onClick={() => setShowCreditModal(true)} className="db-cta-buy-credits">
+                  <button onClick={() => openUpgrade('credit')} className="db-cta-buy-credits">
                     <Coins size={14} />
                     <span>Buy Credits</span>
                   </button>

@@ -13,6 +13,7 @@ export default function NoPairedPage() {
   const [trialExpiredWithActiveScreens, setTrialExpiredWithActiveScreens] = useState(false);
   const [trialScreens, setTrialScreens] = useState<TrialScreenSummary[]>([]);
   const [showTrialModal, setShowTrialModal] = useState(false);
+  const [isPaidPlan, setIsPaidPlan] = useState(false);
 
   useEffect(() => {
     cmsApiV2.get('/sac/my/plan')
@@ -22,6 +23,9 @@ export default function NoPairedPage() {
         setAvailableSlots(Math.max(0, allowed - used));
         setTrialExpiredWithActiveScreens(data.trialExpiredWithActiveScreens ?? false);
         setTrialScreens(data.trialScreens ?? []);
+        
+        const type = data.planType || '';
+        setIsPaidPlan(!['TRIAL_PLAN', 'FREE_PLAN', ''].includes(type));
       })
       .catch(() => setAvailableSlots(0));
   }, []);
@@ -30,7 +34,7 @@ export default function NoPairedPage() {
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4rem', gap:'1rem', textAlign:'center', color:'var(--text-muted)' }}>
 
       {/* Purchased-slots callout — shown when user has paid capacity waiting to be paired */}
-      {availableSlots !== null && availableSlots > 0 && (
+      {isPaidPlan && availableSlots !== null && availableSlots > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '.75rem',
           background: 'rgba(16,185,129,.08)', border: '1px solid rgba(16,185,129,.3)',

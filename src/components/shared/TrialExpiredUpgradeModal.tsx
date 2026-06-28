@@ -254,7 +254,7 @@ export default function TrialExpiredUpgradeModal({ trialScreens, onClose }: Prop
                   <span className="teu-per"> / {billingCycle === 'monthly' ? 'mo' : 'yr'} CAD</span>
                 </div>
                 {unselectedCount > 0 && (
-                  <p className="teu-warn" style={{ marginTop: 'auto' }}>
+                  <p className="teu-warn" style={{ marginTop: '1.5rem' }}>
                     {unselectedCount} screen{unselectedCount > 1 ? 's' : ''} will be paused after payment.
                   </p>
                 )}
@@ -300,7 +300,7 @@ export default function TrialExpiredUpgradeModal({ trialScreens, onClose }: Prop
           .teu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(4px);animation:teufade .15s ease}
           @keyframes teufade{from{opacity:0}}
           .teu-dialog{background:#fff;color:#111;border-radius:20px;width:480px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 28px 80px rgba(0,0,0,.3);animation:teuin .2s ease;position:relative}
-          .teu-dialog.teu-wide{width:860px}
+          .teu-dialog.teu-wide{width:740px}
           @keyframes teuin{from{opacity:0;transform:scale(.95) translateY(12px)}}
           .teu-body{padding:1.75rem;position:relative}
           .teu-x{position:absolute;top:.9rem;right:.9rem;background:none;border:1px solid #e5e7eb;border-radius:8px;padding:.28rem;cursor:pointer;color:#6b7280;display:flex;align-items:center;transition:background .15s}
@@ -344,7 +344,7 @@ export default function TrialExpiredUpgradeModal({ trialScreens, onClose }: Prop
           .teu-s2-hdr h2{font-size:.95rem;font-weight:700;margin:0}
           .teu-back{background:none;border:1px solid #e5e7eb;border-radius:7px;padding:.28rem;cursor:pointer;color:#6b7280;display:flex;align-items:center;transition:background .15s}
           .teu-back:hover{background:#f3f4f6}
-          .teu-grid{display:grid;grid-template-columns:1fr 1fr;min-height:330px}
+          .teu-grid{display:grid;grid-template-columns:280px 1fr}
           .teu-left{padding:1.4rem 1.5rem;border-right:1px solid #f3f4f6;display:flex;flex-direction:column;gap:.75rem}
           .teu-left h3{font-size:.88rem;font-weight:700;margin:0}
           .teu-right{padding:1.4rem 1.5rem;display:flex;flex-direction:column;gap:.65rem}
@@ -364,7 +364,7 @@ export default function TrialExpiredUpgradeModal({ trialScreens, onClose }: Prop
           .teu-paybtn:disabled{opacity:.5;cursor:not-allowed}
           .teu-canbtn{padding:.66rem;background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:11px;font-weight:600;cursor:pointer;font-size:.85rem;transition:background .15s}
           .teu-canbtn:hover:not(:disabled){background:#f9fafb}
-          .teu-sfooter{font-size:.68rem;color:#9ca3af;margin:0;line-height:1.5;margin-top:auto}
+          .teu-sfooter{font-size:.68rem;color:#9ca3af;margin:0;line-height:1.5;margin-top:1.5rem}
           .teu-succ{position:absolute;inset:0;background:rgba(255,255,255,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:20px;z-index:10;animation:teufade .2s ease;gap:.25rem}
           .teu-succ-ic{width:58px;height:58px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#16a34a;margin-bottom:.5rem}
           .teu-succ h3{font-size:1.1rem;font-weight:800;margin:0}

@@ -283,8 +283,8 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({ op
               type="submit"
               disabled={saving || loading}
               id="modal-save-org-btn"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-              style={{ background: 'var(--primary, #3b82f6)', color: '#fff' }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-50 hover:opacity-90"
+              style={{ background: 'var(--color-primary)', color: 'var(--color-primary-foreground)' }}
             >
               {saving ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
               {t('MY_ACCOUNT.save_changes', 'Save changes')}
