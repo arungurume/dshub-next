@@ -107,7 +107,7 @@ export const Sidebar: React.FC = () => {
     >
       <div className="flex flex-col overflow-y-auto flex-1 py-6 px-4 gap-8">
 
-        {/* Branding header + toggle arrow */}
+        {/* Branding header */}
         <div className="flex flex-col gap-3">
           {/* Logo row */}
           <div className={`flex items-center px-2 ${isSidebarOpen ? 'justify-between' : 'justify-center'}`}>
@@ -133,18 +133,25 @@ export const Sidebar: React.FC = () => {
               />
             )}
           </div>
-
-          {/* Toggle arrow — just below the logo, right-aligned in expanded / centered in collapsed */}
-          <div className={`flex px-2 ${isSidebarOpen ? 'justify-end' : 'justify-center'}`}>
-            <button
-              onClick={toggleSidebar}
-              style={{ border: '1px solid var(--border)', color: 'var(--text-muted)', background: 'transparent' }}
-              className="p-1 rounded-lg transition-all hidden md:flex items-center justify-center sidebar-toggle-btn"
-            >
-              {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-            </button>
-          </div>
         </div>
+
+        {/* Toggle arrow — straddles the sidebar edge (half on sidebar, half on main container) */}
+        <button
+          onClick={toggleSidebar}
+          aria-label={isSidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          style={{
+            position: 'absolute',
+            top: '28px',
+            right: '-14px',
+            zIndex: 50,
+            border: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+            background: 'var(--sidebar-bg)',
+          }}
+          className="hidden md:flex items-center justify-center w-7 h-7 rounded-full shadow-sm transition-all sidebar-toggle-btn"
+        >
+          {isSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </button>
 
         {/* Navigation Core */}
         <div className="flex flex-col gap-1">

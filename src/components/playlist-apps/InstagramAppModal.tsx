@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Check, XCircle, RefreshCw } from 'lucide-react';
 import { PlaylistItem } from '@/types/playlist';
 import { PreviewTVBezel } from './PreviewTVBezel';
 import { cmsApi } from '@/lib/api';
-import {
-  INSTAGRAM_CONNECT,
-  INSTAGRAM_STATUS,
-  INSTAGRAM_MEDIA,
-  INSTAGRAM_DISCONNECT,
-} from '@/lib/apiPaths';
+import { useInstagramConnect } from '@/hooks/useInstagramConnect';
+import { INSTAGRAM_MEDIA } from '@/lib/apiPaths';
 
 interface IgPost {
   id: string;
@@ -32,14 +28,22 @@ export function InstagramAppModal({ editIndex, initialData, onAdd, onEdit, onClo
     initialData?.accountName ? 'style' : 'source'
   );
 
-  // Connection state
-  const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
-  const [igUsername, setIgUsername] = useState<string>(initialData?.accountName || '');
+  // Connection lifecycle is owned by the hook — handles OAuth popup,
+  // postMessage handshake from /instagram-callback, status polling, disconnect.
+  const {
+    connected,
+    connecting,
+    username: igUsername,
+    error: igError,
+    connect,
+    disconnect,
+    checkStatus,
+  } = useInstagramConnect();
+
+  // Local: the fetched posts + their approval state (playlist-specific).
   const [posts, setPosts] = useState<IgPost[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState('');
-  const popupRef = useRef<Window | null>(null);
 
   // Style settings
   const [displayLanguage, setDisplayLanguage] = useState(initialData?.language || 'English (en)');
@@ -62,67 +66,39 @@ export function InstagramAppModal({ editIndex, initialData, onAdd, onEdit, onClo
     try {
       const res = await cmsApi.get(INSTAGRAM_MEDIA);
       const data = res.data?.data || [];
-      setIgUsername(res.data?.username || igUsername);
       setPosts(data.map((p: any) => ({ ...p, approved: true })));
     } catch {
       setMediaError('Failed to load Instagram posts. Please reconnect.');
     } finally {
       setMediaLoading(false);
     }
-  }, [igUsername]);
+  }, []);
 
-  // Check connection status on mount
-  useEffect(() => {
-    cmsApi.get(INSTAGRAM_STATUS).then(res => {
-      if (res.data?.connected) {
-        setConnected(true);
-        loadMedia();
-      }
-    }).catch(() => {});
-  }, [loadMedia]);
-
-  // Listen for popup postMessage from /instagram-callback
-  useEffect(() => {
-    function onMessage(e: MessageEvent) {
-      if (e.data?.type !== 'INSTAGRAM_OAUTH') return;
-      if (popupRef.current) { popupRef.current.close(); popupRef.current = null; }
-      setConnecting(false);
-      if (e.data.status === 'success') {
-        setConnected(true);
-        loadMedia().then(() => setActiveTab('moderate'));
-      } else {
-        setMediaError('Instagram connection failed. Please try again.');
-      }
-    }
-    window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
-  }, [loadMedia]);
-
-  async function handleConnect() {
-    setConnecting(true);
-    setMediaError('');
-    try {
-      const res = await cmsApi.get(INSTAGRAM_CONNECT);
-      const { authorizeUrl } = res.data;
-      const popup = window.open(authorizeUrl, 'ig_oauth', 'width=600,height=700,left=200,top=100');
-      popupRef.current = popup;
-      // Poll for popup close in case postMessage doesn't fire
-      const timer = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(timer);
-          setConnecting(false);
-        }
-      }, 1000);
-    } catch {
-      setConnecting(false);
-      setMediaError('Could not start Instagram connection. Check backend config.');
+  // Wraps the hook's connect() so a successful OAuth handshake auto-loads
+  // the user's posts and jumps them to the Moderate tab.
+  async function onConnectClick() {
+    const result = await connect();
+    if (result.success) {
+      await loadMedia();
+      setActiveTab('moderate');
     }
   }
 
+  // First-mount status check. Runs once when the modal opens; if the user
+  // is already connected, fetch their posts so the Moderate tab has data.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const wasConnected = await checkStatus();
+      if (!cancelled && wasConnected) {
+        loadMedia();
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [checkStatus, loadMedia]);
+
   async function handleDisconnect() {
-    await cmsApi.delete(INSTAGRAM_DISCONNECT).catch(() => {});
-    setConnected(false);
-    setIgUsername('');
+    await disconnect();
     setPosts([]);
     setActiveTab('source');
   }
@@ -235,12 +211,16 @@ export function InstagramAppModal({ editIndex, initialData, onAdd, onEdit, onClo
                   <button
                     className="pl-btn-primary"
                     style={{ background: 'linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                    onClick={handleConnect}
+                    onClick={onConnectClick}
                     disabled={connecting}
                   >
                     {connecting ? 'Connecting...' : '📸 Connect with Instagram'}
                   </button>
-                  {mediaError && <p style={{ color: '#e74c3c', fontSize: '0.8rem', margin: 0 }}>{mediaError}</p>}
+                  {(igError || mediaError) && (
+                    <p style={{ color: '#e74c3c', fontSize: '0.8rem', margin: 0 }}>
+                      {igError || mediaError}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

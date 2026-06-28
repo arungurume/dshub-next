@@ -14,6 +14,9 @@ import {
 import { umsApi, omsApi, cmsApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
 import { LANG_META, SUPPORTED_LANGUAGES, SupportedLang } from '@/lib/i18n';
+import { isValidPhoneNumber, AsYouType } from 'libphonenumber-js/min';
+import { useInstagramConnect } from '@/hooks/useInstagramConnect';
+import { InstagramAppModal } from '@/components/playlist-apps/InstagramAppModal';
 
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -28,7 +31,13 @@ const orgSchema = z.object({
   organization: z.string().min(1, 'Organization name is required'),
   address: z.string().min(1, 'Address is required'),
   contactEmailId: z.string().email('Valid email required'),
-  contactNumber: z.string().min(5, 'Phone number is required'),
+  contactNumber: z
+    .string()
+    .min(1, 'Phone number is required')
+    .refine(
+      (val) => isValidPhoneNumber(val),
+      'Please enter a valid international phone number (e.g. +1 555 000 0000)'
+    ),
 });
 
 const passwordSchema = z.object({
@@ -64,6 +73,9 @@ export default function MyAccountPage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Integrations tab — Instagram connection state + modal
+  const ig = useInstagramConnect();
+  const [showInstagramModal, setShowInstagramModal] = useState(false);
   // Billing state
   const [plan, setPlan] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -84,6 +96,10 @@ export default function MyAccountPage() {
   const profileForm = useForm<ProfileForm>({ resolver: zodResolver(profileSchema) });
   const orgForm = useForm<OrgForm>({ resolver: zodResolver(orgSchema) });
   const passwordForm = useForm<PasswordForm>({ resolver: zodResolver(passwordSchema) });
+
+  // Canva state
+  const [canvaConnected, setCanvaConnected] = useState(false);
+  const [canvaConnecting, setCanvaConnecting] = useState(false);
 
   // ── Load user & org data ──
   useEffect(() => {
@@ -116,6 +132,51 @@ export default function MyAccountPage() {
       .then(({ data }) => setInvoices(data.purchaseHistory || data.invoices || []))
       .catch(() => {});
   }, []);
+
+  // When the Integrations tab is opened, ask the backend whether Instagram
+  // is already linked so the row can render "Connected" on first paint.
+  useEffect(() => {
+    if (activeTab === 'integrations') {
+      ig.checkStatus();
+      
+      // Check Canva status
+      cmsApi.get('/canva/profile')
+        .then(({ data }) => setCanvaConnected(!!data?.profile))
+        .catch(() => setCanvaConnected(false));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  const connectCanva = async () => {
+    setCanvaConnecting(true);
+    try {
+      const { data } = await cmsApi.get('/canva/connect');
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
+        toast.error('Could not initiate Canva connection');
+        setCanvaConnecting(false);
+      }
+    } catch {
+      toast.error('Failed to connect to Canva');
+      setCanvaConnecting(false);
+    }
+  };
+
+  const disconnectCanva = async () => {
+    try {
+      const { data } = await cmsApi.delete('/canva/disconnect');
+      if (data?.success) {
+        setCanvaConnected(false);
+        toast.success('Canva disconnected.');
+      } else {
+        toast.error('Could not disconnect Canva.');
+      }
+    } catch {
+      toast.error('Failed to disconnect Canva.');
+    }
+  };
+
   function switchTab(tab: string) {
     setActiveTab(tab);
     router.replace(`?tab=${tab}`, { scroll: false });
@@ -293,7 +354,38 @@ export default function MyAccountPage() {
                 </div>
                 <div className="form-group">
                   <label>{t('MY_ACCOUNT.contact_number')}</label>
-                  <input {...orgForm.register('contactNumber')} placeholder="+1 555 000 0000" />
+                  <input
+                    {...orgForm.register('contactNumber')}
+                    type="tel"
+                    inputMode="tel"
+                    maxLength={25}
+                    placeholder="+1 555 000 0000"
+                    onChange={(e) => {
+                      // Live-format as the user types using libphonenumber-js.
+                      // AsYouType doesn't enforce a length cap, so we strip
+                      // digits beyond the E.164 max of 15.
+                      const ayt = new AsYouType();
+                      let formatted = ayt.input(e.target.value);
+                      const digits = formatted.replace(/\D/g, '');
+                      if (digits.length > 15) {
+                        const keep = 15;
+                        let kept = 0;
+                        let out = '';
+                        for (const ch of formatted) {
+                          if (/\d/.test(ch)) {
+                            if (kept >= keep) continue;
+                            kept++;
+                          }
+                          out += ch;
+                        }
+                        formatted = out;
+                      }
+                      if (formatted !== e.target.value) {
+                        e.target.value = formatted;
+                      }
+                      orgForm.setValue('contactNumber', formatted, { shouldValidate: true });
+                    }}
+                  />
                   {orgForm.formState.errors.contactNumber && (
                     <span className="field-error">{orgForm.formState.errors.contactNumber.message}</span>
                   )}
@@ -516,38 +608,99 @@ export default function MyAccountPage() {
               <p className="panel-subtitle">{t('MY_ACCOUNT.connected_apps_sub')}</p>
               <div className="integrations-list">
                 {[
-                  { id:'ig', name:'Instagram',  desc:'Social feed integration.',     bg:'#E1306C', label: (searchParams.get('integration') === 'instagram' && searchParams.get('status') === 'success') ? 'Connected' : 'Connect',     disabled:false },
-                  { id:'cn', name:'Canva',       desc:'Design and publish directly.', bg:'#00C4CC', label:'Coming Soon', disabled:true  },
+                  { id:'ig', name:'Instagram',  desc:'Social feed integration.',     bg:'#E1306C' },
+                  { id:'cn', name:'Canva',       desc:'Design and publish directly.', bg:'#00C4CC' },
                   { id:'to', name:'Toast',       desc:'POS Integration.',             bg:'#ea5b0c', label:'Coming Soon', disabled:true  },
                   { id:'cl', name:'Clover',      desc:'POS Integration.',             bg:'#235d3b', label:'Coming Soon', disabled:true  },
                   { id:'sq', name:'Square POS',  desc:'POS Integration.',             bg:'#000000', label:'Coming Soon', disabled:true  },
-                ].map(app => (
-                  <div key={app.id} className="integration-row" id={`integration-${app.id}`}>
-                    <div className="integration-icon" style={{ background: app.bg }}>{app.name.slice(0,2)}</div>
-                    <div className="integration-info">
-                      <p className="integration-name">{app.name}</p>
-                      <p className="integration-desc">{app.desc}</p>
+                ].map(app => {
+                  const isIg = app.id === 'ig';
+                  const isCn = app.id === 'cn';
+                  let label = app.label!;
+                  
+                  if (isIg) label = ig.connected ? 'Connected' : 'Connect';
+                  else if (isCn) label = canvaConnected ? 'Connected' : 'Connect';
+                  
+                  const isDisabled = !!app.disabled;
+                  return (
+                    <div key={app.id} className="integration-row" id={`integration-${app.id}`}>
+                      <div className="integration-icon" style={{ background: app.bg }}>{app.name.slice(0,2)}</div>
+                      <div className="integration-info">
+                        <p className="integration-name">{app.name}</p>
+                        <p className="integration-desc">{app.desc}</p>
+                      </div>
+                      {isIg ? (
+                        ig.connected ? (
+                          <button
+                            className="btn-outline-sm btn-sm-inline"
+                            id={`disconnect-${app.id}`}
+                            onClick={async () => {
+                              await ig.disconnect();
+                              toast.success('Instagram disconnected.');
+                            }}
+                          >
+                            Disconnect
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-primary btn-sm-inline"
+                            disabled={ig.connecting}
+                            id={`connect-${app.id}`}
+                            onClick={async () => {
+                              const result = await ig.connect();
+                              if (result.success) {
+                                setShowInstagramModal(true);
+                              }
+                            }}
+                          >
+                            <Link size={13} /> {ig.connecting ? 'Connecting…' : 'Connect'}
+                          </button>
+                        )
+                      ) : isCn ? (
+                        canvaConnected ? (
+                          <button
+                            className="btn-outline-sm btn-sm-inline"
+                            id={`disconnect-${app.id}`}
+                            onClick={disconnectCanva}
+                          >
+                            Disconnect
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-primary btn-sm-inline"
+                            disabled={canvaConnecting}
+                            id={`connect-${app.id}`}
+                            onClick={connectCanva}
+                          >
+                            <Link size={13} /> {canvaConnecting ? 'Connecting…' : 'Connect'}
+                          </button>
+                        )
+                      ) : (
+                        <button
+                          className={isDisabled ? 'btn-outline-sm btn-disabled' : 'btn-primary btn-sm-inline'}
+                          disabled={isDisabled}
+                          id={`connect-${app.id}`}
+                        >
+                          <Link size={13} /> {label}
+                        </button>
+                      )}
                     </div>
-                    <button 
-                      className={app.disabled ? 'btn-outline-sm btn-disabled' : 'btn-primary btn-sm-inline'} 
-                      disabled={app.disabled || app.label === 'Connected'} 
-                      id={`connect-${app.id}`}
-                      onClick={() => {
-                        if (app.id === 'ig' && app.label === 'Connect') {
-                           toast.success('Redirecting to Instagram to authorize...');
-                           setTimeout(() => {
-                             router.replace('?tab=integrations&integration=instagram&status=success', { scroll: false });
-                             toast.success('Instagram connected successfully!');
-                           }, 1500);
-                        }
-                      }}
-                    >
-                      <Link size={13} /> {app.label}
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
+          )}
+
+          {/* Instagram connect modal — same component the playlist editor uses,
+              but onAdd/onEdit are no-ops at the org level (this tab only
+              persists the OAuth handshake, not a playlist item). */}
+          {showInstagramModal && (
+            <InstagramAppModal
+              initialData={undefined}
+              onAdd={() => { setShowInstagramModal(false); ig.checkStatus(); }}
+              onEdit={() => { setShowInstagramModal(false); ig.checkStatus(); }}
+              onClose={() => { setShowInstagramModal(false); ig.checkStatus(); }}
+            />
           )}
 
         </div>
