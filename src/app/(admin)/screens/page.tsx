@@ -157,7 +157,7 @@ export default function ScreensPage() {
         const mapped: Screen[] = (data || []).map((s: any) => ({
           ...s,
           deviceTypeName: DEVICE_TYPE_MAP[s.deviceType] || 'Unknown',
-          status: s.liveStatus === true ? 'LIVE' : 'READY_TO_USE',
+          status: s.status === 'LIVE' ? 'LIVE' : 'READY_TO_USE',
           isChecked: false,
         }));
         setScreens(mapped);
@@ -173,20 +173,20 @@ export default function ScreensPage() {
           }
         });
 
-        if (!data.content?.length && page === 0) {
+        if (!data?.content?.length && page === 0) {
           router.push('/screens/no-paired');
           return;
         }
 
-        const mapped: Screen[] = (data.content || []).map((s: any) => ({
+        const mapped: Screen[] = (data?.content || []).map((s: any) => ({
           ...s,
           deviceTypeName: DEVICE_TYPE_MAP[s.deviceType] || 'Unknown',
-          status: s.liveStatus === true ? 'LIVE' : 'READY_TO_USE',
+          status: s.status === 'LIVE' ? 'LIVE' : 'READY_TO_USE',
           isChecked: false,
         }));
 
         setScreens(mapped);
-        setPagination(p => ({ ...p, page, total: data.totalElements || mapped.length }));
+        setPagination(p => ({ ...p, page, total: data?.totalElements || mapped.length }));
       }
     } catch {
       toast.error(t('SCREENS.load_failed'));

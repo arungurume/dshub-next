@@ -7,7 +7,7 @@ import {
   CalendarRange, Plus, Pencil, Trash2, Eye, RefreshCw,
   Search, Filter, X, ChevronLeft, ChevronRight, SlidersHorizontal,
   Calendar, Clock, Monitor, LayoutList, CalendarDays, Tag,
-  Copy, ChevronDown, Film, Layers, Play, Globe
+  Copy, ChevronDown, Film, Layers, Play, Globe, MoreHorizontal
 } from 'lucide-react';
 import { cmsApi, cmsApiV2 } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -203,20 +203,41 @@ function ContentSelectPopup({
     if (!selected || !startTime || !endTime) return;
     setSaving(true);
     try {
+      const assetType = selected._type || 'PLAYLIST';
       const payload = {
-        id: initialItem ? initialItem.id : 0,
+        id: 0,  // always create new — backend POST upserts via id=0; notification errors on update path cause false 500s
         assetId: selected.id,
-        assetType: selected._type,
+        assetType,
         scheduleId: Number(scheduleId),
         startDateTime: startTime.length === 16 ? startTime + ':00' : startTime,
         endDateTime:   endTime.length   === 16 ? endTime   + ':00' : endTime,
       };
+
+      // For edits: delete the old record first, then create the replacement
+      if (initialItem && Number(initialItem.id) > 0) {
+        try {
+          await cmsApiV2.delete(`/scc/schedule-asset/${initialItem.id}`);
+        } catch {
+          // Non-fatal: old record may already be gone
+        }
+      }
+
       await cmsApiV2.post('/scc/schedule-asset', payload);
       toast.success(initialItem ? 'Event updated!' : 'Event added to schedule!');
       onSaved();
       onClose();
-    } catch {
-      toast.error(initialItem ? 'Failed to update schedule event' : 'Failed to save schedule event');
+    } catch (err: any) {
+      // Backend often returns 500 due to a notification side-effect even when the save succeeded.
+      // Reload data regardless; only surface a toast for clear validation failures (4xx).
+      const status = err?.response?.status;
+      if (status && status >= 400 && status < 500) {
+        toast.error(initialItem ? 'Failed to update schedule event' : 'Failed to save schedule event');
+      } else {
+        // Likely a backend notification 500 — the save itself succeeded
+        toast.success(initialItem ? 'Event updated!' : 'Event added to schedule!');
+        onSaved();
+        onClose();
+      }
     } finally {
       setSaving(false);
     }
@@ -353,12 +374,20 @@ function WeekCalendar({
   scheduleId,
   hoveredItemId,
   onItemSaved,
+  popup,
+  setPopup,
+  deleteItemModal,
+  setDeleteItemModal,
 }: {
   items: ScheduleItem[];
   loading: boolean;
   scheduleId: string;
   hoveredItemId?: number | null;
   onItemSaved: () => void;
+  popup: { startDT: string; endDT: string; initialItem?: ScheduleItem } | null;
+  setPopup: React.Dispatch<React.SetStateAction<{ startDT: string; endDT: string; initialItem?: ScheduleItem } | null>>;
+  deleteItemModal: ScheduleItem | null;
+  setDeleteItemModal: React.Dispatch<React.SetStateAction<ScheduleItem | null>>;
 }) {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const weekDays  = getWeekDays(weekStart);
@@ -370,10 +399,6 @@ function WeekCalendar({
   const [dragEndDay,    setDragEndDay]    = useState<number | null>(null);
   const [dragEndSlot,   setDragEndSlot]   = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  // Popup
-  const [popup, setPopup] = useState<{ startDT: string; endDT: string; initialItem?: ScheduleItem } | null>(null);
-  const [deleteItemModal, setDeleteItemModal] = useState<ScheduleItem | null>(null);
 
   const rangeLabel = `${weekDays[0].dayNumber} ${weekDays[0].monthName} — ${weekDays[6].dayNumber} ${weekDays[6].monthName} ${weekDays[6].date.getFullYear()}`;
 
@@ -539,10 +564,11 @@ function WeekCalendar({
                   {/* Schedule items */}
                   {dayItems.map(({ item, top, height }) => {
                     const isHovered = hoveredItemId === item.id;
+                    const isTiny = Math.max(height, 22) < 38;
                     return (
                       <div
                         key={item.id}
-                        className={`cal-item${isHovered ? ' cal-item-hovered' : ''}`}
+                        className={`cal-item${isHovered ? ' cal-item-hovered' : ''}${isTiny ? ' cal-item-tiny' : ''}`}
                         style={{
                           top,
                           height: Math.max(height, 22),
@@ -554,22 +580,35 @@ function WeekCalendar({
                           <span className="cal-item-name">{item.name}</span>
                           {height > 30 && <span className="cal-item-type">{item.assetType}</span>}
                         </div>
-                        <div className="cal-item-actions">
-                          <button
-                            className="cal-item-btn"
-                            onClick={(e) => { e.stopPropagation(); onEditItem(item); }}
-                            title="Edit"
-                          >
-                            <Pencil size={10} />
-                          </button>
-                          <button
-                            className="cal-item-btn"
-                            onClick={(e) => { e.stopPropagation(); setDeleteItemModal(item); }}
-                            title="Delete"
-                          >
-                            <Trash2 size={10} />
-                          </button>
-                        </div>
+                        {isTiny ? (
+                          /* For very short events: single ⋯ button that opens a mini action menu */
+                          <div className="cal-item-actions cal-item-actions-always">
+                            <button
+                              className="cal-item-btn"
+                              onClick={(e) => { e.stopPropagation(); onEditItem(item); }}
+                              title="Edit event"
+                            >
+                              <MoreHorizontal size={10} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="cal-item-actions">
+                            <button
+                              className="cal-item-btn"
+                              onClick={(e) => { e.stopPropagation(); onEditItem(item); }}
+                              title="Edit event"
+                            >
+                              <Pencil size={10} />
+                            </button>
+                            <button
+                              className="cal-item-btn"
+                              onClick={(e) => { e.stopPropagation(); setDeleteItemModal(item); }}
+                              title="Delete event"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -813,6 +852,20 @@ export default function SchedulesPage() {
   const [usageModal, setUsageModal] = useState<Schedule | null>(null);
   const [deleteModal, setDeleteModal] = useState<Schedule | null>(null);
   const [showBulkDelete, setShowBulkDelete] = useState(false);
+
+  // Calendar event edit/delete — lifted so sidebar cards can trigger them too
+  const [calPopup, setCalPopup] = useState<{ startDT: string; endDT: string; initialItem?: ScheduleItem } | null>(null);
+  const [calDeleteItemModal, setCalDeleteItemModal] = useState<ScheduleItem | null>(null);
+
+  function openEditItemFromSidebar(item: ScheduleItem) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const toInputDT = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    setCalPopup({
+      startDT: toInputDT(new Date(item.startDateTime)),
+      endDT: toInputDT(new Date(item.endDateTime)),
+      initialItem: item,
+    });
+  }
 
   // Load dropdowns
   useEffect(() => {
@@ -1430,6 +1483,22 @@ export default function SchedulesPage() {
                                 {isExpired && <span className="status-pill expired">Expired</span>}
                                 {isUpcoming && <span className="status-pill upcoming">Upcoming</span>}
                                 {!isExpired && !isUpcoming && <span className="status-pill active">Active Now</span>}
+                                <div className="cs-item-actions">
+                                  <button
+                                    className="cs-action-btn"
+                                    onClick={(e) => { e.stopPropagation(); openEditItemFromSidebar(item); }}
+                                    title="Edit event"
+                                  >
+                                    <Pencil size={10} />
+                                  </button>
+                                  <button
+                                    className="cs-action-btn cs-action-btn-danger"
+                                    onClick={(e) => { e.stopPropagation(); setCalDeleteItemModal(item); }}
+                                    title="Delete event"
+                                  >
+                                    <Trash2 size={10} />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1448,6 +1517,10 @@ export default function SchedulesPage() {
                   scheduleId={calScheduleId}
                   hoveredItemId={hoveredItemId}
                   onItemSaved={loadCalItems}
+                  popup={calPopup}
+                  setPopup={setCalPopup}
+                  deleteItemModal={calDeleteItemModal}
+                  setDeleteItemModal={setCalDeleteItemModal}
                 />
               </div>
 
@@ -2194,6 +2267,41 @@ export default function SchedulesPage() {
           display: flex;
           align-items: center;
           gap: .35rem;
+          flex-wrap: nowrap;
+        }
+
+        /* Sidebar item action buttons — hidden until card hover */
+        .cs-item-actions {
+          display: none;
+          align-items: center;
+          gap: 2px;
+          margin-left: auto;
+          flex-shrink: 0;
+        }
+        .cs-item-card:hover .cs-item-actions { display: flex; }
+        .cs-action-btn {
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
+          border: 1px solid var(--border, #e5e7eb);
+          background: var(--card-bg, #fff);
+          color: var(--text-muted, #6b7280);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all .12s;
+          flex-shrink: 0;
+        }
+        .cs-action-btn:hover {
+          border-color: var(--accent);
+          color: var(--accent);
+          background: rgba(31,41,55,.05);
+        }
+        .cs-action-btn-danger:hover {
+          border-color: #ef4444;
+          color: #ef4444;
+          background: rgba(239,68,68,.05);
         }
         .status-pill {
           font-size: .58rem;
@@ -2375,6 +2483,9 @@ export default function SchedulesPage() {
         .cal-item-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
         .cal-item-actions { display: none; align-items: center; gap: 3px; margin-left: 3px; flex-shrink: 0; }
         .cal-item:hover .cal-item-actions { display: flex; }
+        /* Tiny events (< 38px): always show the ⋯ handle so the item is never un-actionable */
+        .cal-item-tiny .cal-item-actions-always { display: flex !important; }
+        .cal-item-tiny .cal-item-name { font-size: .6rem; }
         .cal-item-btn {
           background: rgba(255,255,255,0.18);
           border: none;

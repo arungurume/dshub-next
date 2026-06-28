@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  Tag, Plus, Pencil, Trash2, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, X
+  Tag, Plus, Pencil, Trash2, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, X,
+  Calendar, Layers, Film, Minus
 } from 'lucide-react';
 import { cmsApi } from '@/lib/api';
 import { useLanguage } from '@/context/LanguageContext';
@@ -14,6 +15,39 @@ interface ScreenGroup {
   name: string;
   updatedDate: string;
   screenCount?: number;
+  scheduleId?: number;
+  contentType?: string | null;
+  contentId?: string | null;
+  contentName?: string | null;
+}
+
+function AssignmentBadge({ tag }: { tag: ScreenGroup }) {
+  const type = tag.contentType?.toUpperCase();
+  if (type === 'SCHEDULE' || (tag.scheduleId && tag.scheduleId > 0)) {
+    return (
+      <span className="assign-badge assign-badge-schedule">
+        <Calendar size={11} />
+        {tag.contentName || (tag.contentId ? `Schedule #${tag.contentId}` : `Schedule #${tag.scheduleId}`)}
+      </span>
+    );
+  }
+  if (type === 'PLAYLIST') {
+    return (
+      <span className="assign-badge assign-badge-playlist">
+        <Layers size={11} />
+        {tag.contentName || `Playlist #${tag.contentId}`}
+      </span>
+    );
+  }
+  if (type === 'MEDIA') {
+    return (
+      <span className="assign-badge assign-badge-media">
+        <Film size={11} />
+        {tag.contentName || `Media #${tag.contentId}`}
+      </span>
+    );
+  }
+  return <span className="assign-badge assign-badge-none"><Minus size={11} /> None</span>;
 }
 
 export default function ScreenTagsPage() {
@@ -186,6 +220,7 @@ export default function ScreenTagsPage() {
             <thead>
               <tr>
                 <th>{t('SCREENS.tag_name')}</th>
+                <th>Assigned content</th>
                 <th className="hidden sm:table-cell">{t('SCREENS.last_modified')}</th>
                 <th style={{ width: 180 }}>{t('SCREENS.actions')}</th>
               </tr>
@@ -197,7 +232,13 @@ export default function ScreenTagsPage() {
                     <div className="tag-name-cell">
                       <Tag size={14} className="tag-cell-icon" />
                       <span className="tag-name">{tag.name}</span>
+                      {tag.screenCount ? (
+                        <span className="screen-count-pill">{tag.screenCount} screen{tag.screenCount !== 1 ? 's' : ''}</span>
+                      ) : null}
                     </div>
+                  </td>
+                  <td>
+                    <AssignmentBadge tag={tag} />
                   </td>
                   <td className="cell-muted hidden sm:table-cell">
                     {tag.updatedDate ? new Date(tag.updatedDate).toLocaleDateString() : '—'}
@@ -207,9 +248,9 @@ export default function ScreenTagsPage() {
                       <button
                         className="btn-action-assign"
                         onClick={() => router.push(`/screens/tags/${tag.id}`)}
-                        id={`assign-schedule-tag-${tag.id}`}
+                        id={`manage-tag-${tag.id}`}
                       >
-                        {t('SCREENS.assign_schedule')}
+                        Manage
                       </button>
                       <button
                         className="action-btn"
@@ -360,9 +401,16 @@ export default function ScreenTagsPage() {
         .tags-table tr:hover td { background: var(--sidebar-hover); }
         .cell-muted { color: var(--text-muted); font-size: .825rem; }
 
-        .tag-name-cell { display: flex; align-items: center; gap: .6rem; }
-        .tag-cell-icon { color: var(--accent); opacity: 0.8; }
+        .tag-name-cell { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+        .tag-cell-icon { color: var(--accent); opacity: 0.8; flex-shrink: 0; }
         .tag-name { font-weight: 600; }
+        .screen-count-pill { font-size: .65rem; color: var(--text-muted); background: var(--sidebar-bg); border: 1px solid var(--border); border-radius: 999px; padding: .1rem .45rem; font-weight: 600; }
+
+        .assign-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; font-weight: 600; padding: .25rem .6rem; border-radius: 999px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .assign-badge-schedule { background: rgba(99,102,241,.1); color: var(--accent); border: 1px solid rgba(99,102,241,.2); }
+        .assign-badge-playlist { background: rgba(16,185,129,.1); color: #059669; border: 1px solid rgba(16,185,129,.2); }
+        .assign-badge-media { background: rgba(245,158,11,.1); color: #d97706; border: 1px solid rgba(245,158,11,.2); }
+        .assign-badge-none { background: var(--sidebar-bg); color: var(--text-muted); border: 1px solid var(--border); }
 
         .action-row { display: flex; gap: .5rem; align-items: center; }
         .btn-action-assign {
