@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   MapPin, Plus, Star, Pencil, Trash2, RefreshCw,
-  Building2, Phone, Mail, Lock, X
+  Building2, Phone, Mail, Lock, X, MoreHorizontal
 } from 'lucide-react';
 import { omsApi, umsApi, cmsApiV2 } from '@/lib/api';
 import { useDSStore } from '@/store/useDSStore';
@@ -71,6 +71,7 @@ export default function LocationsPage() {
   } | null>(null);
   const { upgradeModal, openUpgrade, closeUpgrade } = useUpgradeModal();
   const [allowedLocations, setAllowedLocations] = useState(3);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     setUserRole(localStorage.getItem('role') || '');
@@ -149,19 +150,15 @@ export default function LocationsPage() {
 
   return (
     <div className="locations-page">
-      {/* Header */}
-      <div className="loc-toolbar">
-        <div className="toolbar-left">
-          <MapPin size={20} />
-          <h1 className="page-title">{t('LOCATIONS.title')}</h1>
-          <span className="count-pill">{locations.length}</span>
+      {/* Banner */}
+      <div className="loc-banner">
+        <div className="loc-banner-content">
+          <h1 className="loc-banner-title">My Locations</h1>
+          <p className="loc-banner-desc">Manage all your storefronts and brands from a single account. Add locations for only $10/month.</p>
         </div>
-        {isAdmin && (
-          <button className="btn-primary" onClick={handleAddNew} id="add-location-btn">
-            <Plus size={14} />
-            {t('LOCATIONS.add_location')}
-          </button>
-        )}
+        <div className="loc-banner-icon-bg">
+          <MapPin size={160} strokeWidth={1} className="loc-banner-bg-svg" />
+        </div>
       </div>
 
       {/* Content */}
@@ -170,111 +167,99 @@ export default function LocationsPage() {
           <RefreshCw size={24} className="spin" />
           <span>{t('LOCATIONS.loading_locations')}</span>
         </div>
-      ) : locations.length === 0 ? (
-        <div className="loc-empty">
-          <MapPin size={48} opacity={.2} />
-          <h3>{t('LOCATIONS.no_locations_yet')}</h3>
-          <p>{t('LOCATIONS.add_first_location')}</p>
-          {isAdmin && (
-            <button className="btn-primary" onClick={() => router.push('/locations/0')} id="create-first-loc-btn">
-              <Plus size={14} /> {t('LOCATIONS.create_location')}
-            </button>
-          )}
-        </div>
       ) : (
         <div className="loc-grid">
+          {openMenuId !== null && <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />}
+          
+          {/* Add location card — always visible for admins (moved to front) */}
+          {isAdmin && (
+            <div
+              className={`loc-card loc-card-add${locations.length >= allowedLocations ? ' loc-card-add-locked' : ' loc-card-add-open'}`}
+              onClick={handleAddNew}
+              id="add-more-loc-btn"
+            >
+              <div className="loc-add-inner">
+                <div className="loc-add-icon">
+                  {locations.length >= allowedLocations ? <Lock size={22} /> : <MapPin size={28} />}
+                </div>
+                <p className="loc-add-label">
+                  {locations.length >= allowedLocations
+                    ? t('LOCATIONS.add_another_location')
+                    : 'Add Location'}
+                </p>
+                {locations.length >= allowedLocations && (
+                  <p className="loc-add-hint">{t('LOCATIONS.upgrade_hint')}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {locations.length === 0 && !isAdmin && (
+            <div className="loc-empty-inline">
+              <MapPin size={36} opacity={.25} />
+              <h3>{t('LOCATIONS.no_locations_yet')}</h3>
+            </div>
+          )}
+
           {locations.map((loc) => (
             <div key={loc.id} className={`loc-card${loc.default ? ' loc-card-default' : ''}`}>
-              {/* Default badge */}
-              {loc.default && (
-                <div className="default-ribbon">
-                  <Star size={11} fill="currentColor" />
-                  {t('LOCATIONS.default')}
-                </div>
-              )}
-
-              {/* Icon & name */}
-              <div className="loc-card-head">
-                <div className="loc-icon">
-                  <Building2 size={20} />
-                </div>
-                <div>
-                  <h3 className="loc-name">{loc.name}</h3>
-                  <p className="loc-address">{loc.address}</p>
-                </div>
-              </div>
-
-              {/* Details */}
-              <div className="loc-details">
-                {loc.contactPerson && (
-                  <div className="loc-detail-row">
-                    <span className="detail-label">{t('LOCATIONS.contact')}</span>
-                    <span>{loc.contactPerson}</span>
+              {/* Default badge / actions */}
+              <div className="loc-card-topbar">
+                {loc.default ? (
+                  <div className="default-ribbon">
+                    <Star size={10} fill="currentColor" />
+                    {t('LOCATIONS.default')}
                   </div>
-                )}
-                {loc.contactEmail && (
-                  <div className="loc-detail-row">
-                    <Mail size={13} />
-                    <span>{loc.contactEmail}</span>
-                  </div>
-                )}
-                {loc.contactNumber && (
-                  <div className="loc-detail-row">
-                    <Phone size={13} />
-                    <span>{loc.contactNumber}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              {isAdmin && (
-                <div className="loc-card-actions">
-                  {!loc.default && (
-                    <button
-                      className="loc-action-btn"
-                      onClick={() => handleSetDefault(loc)}
-                      id={`set-default-${loc.id}`}
-                      title={t('LOCATIONS.set_default')}
-                    >
-                      <Star size={13} />
-                      {t('LOCATIONS.set_default')}
+                ) : <div />}
+                
+                {isAdmin && (
+                  <div className="relative z-20">
+                    <button className="loc-menu-trigger" onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === loc.id ? null : loc.id); }}>
+                      <MoreHorizontal size={18} />
                     </button>
+                    {openMenuId === loc.id && (
+                      <div className="loc-dropdown-menu animate-in fade-in zoom-in-95 duration-100">
+                        {!loc.default && (
+                          <button onClick={() => { setOpenMenuId(null); handleSetDefault(loc); }} className="loc-dropdown-item">
+                            <Star size={13} /> {t('LOCATIONS.set_default')}
+                          </button>
+                        )}
+                        <button onClick={() => { setOpenMenuId(null); router.push(`/locations/${loc.id}`); }} className="loc-dropdown-item">
+                          <Pencil size={13} /> {t('LOCATIONS.edit')}
+                        </button>
+                        {!loc.default && (
+                          <button onClick={() => { setOpenMenuId(null); handleDelete(loc); }} className="loc-dropdown-item danger">
+                            <Trash2 size={13} /> {t('LOCATIONS.delete')}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Icon & name (Centered) */}
+              <div className="loc-card-center-head">
+                <div className="loc-icon-large">
+                  <MapPin size={24} />
+                </div>
+                <h3 className="loc-name-centered">{loc.name}</h3>
+                <p className="loc-address-centered">{loc.address}</p>
+              </div>
+
+              {/* Details (Contact info) */}
+              {(loc.contactPerson || loc.contactEmail || loc.contactNumber) && (
+                <div className="loc-details-mini">
+                  {loc.contactPerson && (
+                    <div className="loc-detail-row-mini"><span>{loc.contactPerson}</span></div>
                   )}
-                  <button
-                    className="loc-action-btn"
-                    onClick={() => router.push(`/locations/${loc.id}`)}
-                    id={`edit-loc-${loc.id}`}
-                  >
-                    <Pencil size={13} />
-                    {t('LOCATIONS.edit')}
-                  </button>
-                  {!loc.default && (
-                    <button
-                      className="loc-action-btn loc-action-danger"
-                      onClick={() => handleDelete(loc)}
-                      id={`delete-loc-${loc.id}`}
-                    >
-                      <Trash2 size={13} />
-                      {t('LOCATIONS.delete')}
-                    </button>
+                  {loc.contactNumber && (
+                    <div className="loc-detail-row-mini"><Phone size={11} /> <span>{loc.contactNumber}</span></div>
                   )}
                 </div>
               )}
             </div>
           ))}
-
-          {/* Add more card (teaser) */}
-          {isAdmin && locations.length >= 1 && (
-            <div className="loc-card loc-card-add" onClick={handleAddNew} id="add-more-loc-btn">
-              <div className="loc-add-inner">
-                <div className="loc-add-icon">
-                  <Lock size={20} />
-                </div>
-                <p className="loc-add-label">{t('LOCATIONS.add_another_location')}</p>
-                <p className="loc-add-hint">{t('LOCATIONS.upgrade_hint')}</p>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
@@ -293,25 +278,36 @@ export default function LocationsPage() {
       <style>{`
         .locations-page { padding: 1.5rem 2rem; }
 
-        .loc-toolbar {
-          display: flex; align-items: center; justify-content: space-between;
-          margin-bottom: 1.5rem;
+        /* Banner */
+        .loc-banner {
+          background: #3f3f46; color: #fff;
+          border-radius: 12px; padding: 2rem 2.5rem;
+          margin-bottom: 2rem; position: relative;
+          overflow: hidden; display: flex; align-items: center;
         }
-        .toolbar-left { display: flex; align-items: center; gap: .75rem; }
-        .page-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
-        .count-pill {
-          background: var(--accent); color: var(--btn-cta-text);
-          font-size: .7rem; font-weight: 700; padding: .2rem .6rem; border-radius: 999px;
+        .loc-banner-content { position: relative; z-index: 2; max-width: 600px; }
+        .loc-banner-title { font-size: 1.5rem; font-weight: 800; margin: 0 0 .5rem; }
+        .loc-banner-desc { font-size: .95rem; color: #a1a1aa; margin: 0; line-height: 1.5; }
+        .loc-banner-icon-bg {
+          position: absolute; right: -20px; top: -20px;
+          color: rgba(255, 255, 255, 0.1); z-index: 1;
         }
+        .loc-banner-bg-svg { width: 200px; height: 200px; }
 
         /* Loading / empty */
-        .loc-loading, .loc-empty {
+        .loc-loading {
           display: flex; flex-direction: column; align-items: center;
           justify-content: center; gap: 1rem; padding: 5rem 2rem;
           color: var(--text-muted); text-align: center;
         }
-        .loc-empty h3 { font-size: 1.1rem; font-weight: 600; margin: 0; color: var(--text); }
-        .loc-empty p { margin: 0; font-size: .875rem; }
+        .loc-empty-inline {
+          grid-column: 1 / -1;
+          display: flex; flex-direction: column; align-items: center;
+          gap: .75rem; padding: 4rem 2rem;
+          color: var(--text-muted); text-align: center;
+        }
+        .loc-empty-inline h3 { font-size: 1.1rem; font-weight: 600; margin: 0; color: var(--text); }
+        .loc-empty-inline p { margin: 0; font-size: .875rem; }
 
         /* Grid */
         .loc-grid {
@@ -322,72 +318,112 @@ export default function LocationsPage() {
         /* Card */
         .loc-card {
           background: var(--card-bg); border: 1px solid var(--border);
-          border-radius: 16px; padding: 1.5rem; position: relative;
+          border-radius: 16px; padding: 1.25rem; position: relative;
           transition: box-shadow .2s, border-color .2s;
+          display: flex; flex-direction: column;
         }
-        .loc-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,.15); }
+        .loc-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,.08); }
         .loc-card-default {
           border-color: var(--accent);
-          box-shadow: 0 0 0 1px var(--accent), 0 4px 24px rgba(99,102,241,.15);
+          box-shadow: 0 0 0 1px var(--accent), 0 4px 24px rgba(99,102,241,.12);
         }
 
-        /* Default ribbon */
+        /* Topbar (Ribbon & Menu) */
+        .loc-card-topbar {
+          display: flex; justify-content: space-between; align-items: flex-start;
+          margin-bottom: 1rem; min-height: 24px;
+        }
         .default-ribbon {
-          position: absolute; top: 1rem; right: 1rem;
-          display: flex; align-items: center; gap: .3rem;
+          display: inline-flex; align-items: center; gap: .3rem;
           background: var(--accent); color: var(--btn-cta-text);
           font-size: .65rem; font-weight: 700; letter-spacing: .05em;
           padding: .25rem .6rem; border-radius: 999px; text-transform: uppercase;
         }
-
-        /* Head */
-        .loc-card-head { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
-        .loc-icon {
-          width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
-          background: var(--btn-cta-bg);
-          display: flex; align-items: center; justify-content: center; color: white;
+        
+        .loc-menu-trigger {
+          background: rgba(0,0,0,0.05); border: none; padding: .35rem;
+          border-radius: 50%; color: var(--text-muted); cursor: pointer;
+          transition: background .2s, color .2s;
+          display: flex; align-items: center; justify-content: center;
         }
-        .loc-name { font-size: 1rem; font-weight: 700; margin: 0 0 .2rem; }
-        .loc-address { font-size: .8rem; color: var(--text-muted); margin: 0; }
-
-        /* Details */
-        .loc-details { display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1rem; }
-        .loc-detail-row {
+        .loc-menu-trigger:hover { background: rgba(0,0,0,0.1); color: var(--text); }
+        .dark .loc-menu-trigger { background: rgba(255,255,255,0.05); }
+        .dark .loc-menu-trigger:hover { background: rgba(255,255,255,0.1); }
+        
+        .loc-dropdown-menu {
+          position: absolute; right: 0; top: 32px;
+          background: var(--card-bg); border: 1px solid var(--border);
+          border-radius: 10px; padding: .4rem; min-width: 150px;
+          box-shadow: 0 10px 40px rgba(0,0,0,.15); z-index: 30;
+        }
+        .loc-dropdown-item {
           display: flex; align-items: center; gap: .5rem;
-          font-size: .8rem; color: var(--text-muted);
+          width: 100%; text-align: left; background: none; border: none;
+          padding: .5rem .75rem; font-size: .8rem; font-weight: 600;
+          color: var(--text); border-radius: 6px; cursor: pointer;
         }
-        .detail-label { font-weight: 600; color: var(--text); min-width: 60px; }
+        .loc-dropdown-item:hover { background: rgba(0,0,0,0.05); }
+        .dark .loc-dropdown-item:hover { background: rgba(255,255,255,0.05); }
+        .loc-dropdown-item.danger { color: #ef4444; }
+        .loc-dropdown-item.danger:hover { background: #fee2e2; }
+        .dark .loc-dropdown-item.danger:hover { background: rgba(239, 68, 68, 0.15); }
 
-        /* Actions */
-        .loc-card-actions {
-          display: flex; gap: .5rem; padding-top: 1rem;
-          border-top: 1px solid var(--border); flex-wrap: wrap;
+        /* Centered Head */
+        .loc-card-center-head {
+          display: flex; flex-direction: column; align-items: center;
+          text-align: center; margin-bottom: 1rem;
         }
-        .loc-action-btn {
-          display: inline-flex; align-items: center; gap: .35rem;
-          font-size: .75rem; font-weight: 600; padding: .4rem .85rem;
-          border-radius: 8px; border: 1px solid var(--border);
-          background: transparent; color: var(--text-muted); cursor: pointer;
-          transition: all .15s;
+        .loc-icon-large {
+          width: 60px; height: 60px; border-radius: 50%;
+          background: #ff4d6d; color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 1rem;
+          box-shadow: 0 4px 12px rgba(255, 77, 109, 0.3);
         }
-        .loc-action-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light, #ede9fe); }
-        .loc-action-btn.loc-action-danger:hover { border-color: #ef4444; color: #ef4444; background: #fee2e2; }
+        .loc-name-centered { font-size: 1rem; font-weight: 800; margin: 0 0 .3rem; color: var(--text); }
+        .loc-address-centered { font-size: .8rem; color: var(--text-muted); margin: 0; line-height: 1.4; max-width: 90%; }
 
-        /* Add more card */
+        /* Details Mini */
+        .loc-details-mini {
+          display: flex; flex-direction: column; align-items: center;
+          gap: .3rem; margin-top: auto; padding-top: 1rem;
+          border-top: 1px dashed var(--border);
+        }
+        .loc-detail-row-mini {
+          display: flex; align-items: center; gap: .4rem;
+          font-size: .75rem; color: var(--text-muted);
+        }
+
+        /* Add location card */
         .loc-card-add {
           cursor: pointer; border-style: dashed;
           display: flex; align-items: center; justify-content: center;
-          min-height: 200px;
+          min-height: 200px; transition: box-shadow .2s, border-color .2s;
         }
-        .loc-card-add:hover { border-color: var(--accent); }
-        .loc-add-inner { text-align: center; }
+        .loc-card-add-open { border-color: var(--accent); }
+        .loc-card-add-open:hover {
+          box-shadow: 0 4px 24px rgba(0,0,0,.12);
+          background: var(--accent-light);
+        }
+        .loc-card-add-locked { border-color: var(--border); opacity: .75; }
+        .loc-card-add-locked:hover { border-color: var(--text-muted); opacity: 1; }
+        .loc-add-inner { text-align: center; display: flex; flex-direction: column; align-items: center; }
         .loc-add-icon {
-          width: 48px; height: 48px; border-radius: 12px;
-          background: var(--sidebar-bg); border: 1px solid var(--border);
+          width: 60px; height: 60px; border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
-          color: var(--text-muted); margin: 0 auto 1rem;
+          margin: 0 auto 1rem;
         }
-        .loc-add-label { font-size: .9rem; font-weight: 600; margin: 0 0 .25rem; }
+        .loc-card-add-open .loc-add-icon {
+          background: var(--accent-light);
+          border: 1px solid var(--accent);
+          color: var(--accent);
+        }
+        .loc-card-add-locked .loc-add-icon {
+          background: var(--sidebar-bg);
+          border: 1px solid var(--border);
+          color: var(--text-muted);
+        }
+        .loc-add-label { font-size: .9rem; font-weight: 600; margin: 0 0 .25rem; color: var(--text); }
         .loc-add-hint { font-size: .75rem; color: var(--text-muted); margin: 0; }
 
         /* Confirm modal */

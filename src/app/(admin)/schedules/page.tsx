@@ -2433,7 +2433,7 @@ export default function SchedulesPage() {
         }
         .cal-day-num-today {
           background: var(--btn-cta-bg);
-          color: white !important;
+          color: var(--btn-cta-text) !important;
           box-shadow: 0 2px 8px rgba(31,41,55,0.35);
         }
 
@@ -2585,7 +2585,7 @@ export default function SchedulesPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: var(--btn-cta-text);
           flex-shrink: 0;
           box-shadow: 0 2px 8px rgba(31,41,55,0.2);
         }
@@ -2826,7 +2826,7 @@ export default function SchedulesPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: white;
+          color: var(--btn-cta-text);
           font-size: .875rem;
           font-weight: 700;
           flex-shrink: 0;

@@ -719,7 +719,7 @@ export default function MyAccountPage() {
         .account-avatar {
           width: 72px; height: 72px; border-radius: 50%;
           background: var(--btn-cta-bg);
-          color: white; font-size: 1.5rem; font-weight: 700;
+          color: var(--btn-cta-text); font-size: 1.5rem; font-weight: 700;
           display: flex; align-items: center; justify-content: center;
         }
         .avatar-upload-btn {
